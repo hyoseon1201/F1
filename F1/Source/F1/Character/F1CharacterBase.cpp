@@ -6,7 +6,6 @@
 AF1CharacterBase::AF1CharacterBase()
 {
 	PrimaryActorTick.bCanEverTick = false;
-
 }
 
 void AF1CharacterBase::BeginPlay()
