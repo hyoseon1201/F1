@@ -74,5 +74,9 @@ Plugins/**/Intermediate/*
 # Cache files for the editor to use
 DerivedDataCache/*
 
-# Ignore all files in Content/Assets
-Content/Assets/**
+# Content 폴더 전체를 무시
+Content/*
+
+# 하지만 Blueprints 폴더는 포함
+!Content/Blueprints/
+!Content/Blueprints/**
