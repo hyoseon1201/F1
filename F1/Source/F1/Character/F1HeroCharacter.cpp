@@ -4,12 +4,16 @@
 #include "Character/F1HeroCharacter.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 AF1HeroCharacter::AF1HeroCharacter()
 {
-	CameraBoom = CreateDefaultSubobject<USpringArmComponent>("Camera Boom");
-	CameraBoom->SetupAttachment(GetRootComponent());
+	GetCharacterMovement()->bOrientRotationToMovement = true;
+	GetCharacterMovement()->RotationRate = FRotator(0.f, 400.f, 0.f);
+	GetCharacterMovement()->bConstrainToPlane = true;
+	GetCharacterMovement()->bSnapToPlaneAtStart = true;
 
-	ViewCam = CreateDefaultSubobject<UCameraComponent>("View Cam");
-	ViewCam->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
+	bUseControllerRotationPitch = false;
+	bUseControllerRotationRoll = false;
+	bUseControllerRotationYaw = false;
 }

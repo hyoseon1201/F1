@@ -15,11 +15,4 @@ class F1_API AF1HeroCharacter : public AF1CharacterBase
 	GENERATED_BODY()
 public:
 	AF1HeroCharacter();
-	
-private:
-	UPROPERTY(VisibleDefaultsOnly, Category = "View")
-	class USpringArmComponent* CameraBoom;
-
-	UPROPERTY(VisibleDefaultsOnly, Category = "View")
-	class UCameraComponent* ViewCam;
 };
