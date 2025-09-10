@@ -14,4 +14,13 @@ class F1_API AF1PlayerController : public APlayerController
 {
 	GENERATED_BODY()
 	
+public:
+	AF1PlayerController();
+
+protected:
+	virtual void BeginPlay() override;
+
+private:
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<class UInputMappingContext> F1Context;
 };
