@@ -4,15 +4,32 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerState.h"
+#include "AbilitySystemInterface.h"
 #include "F1PlayerState.generated.h"
+
+class UAbilitySystemComponent;
+class UAttributeSet;
 
 /**
  * 
  */
 UCLASS()
-class F1_API AF1PlayerState : public APlayerState
+class F1_API AF1PlayerState : public APlayerState,
+    public IAbilitySystemInterface
 {
 	GENERATED_BODY()
 public:
 	AF1PlayerState();
+
+#pragma region GAS
+public:
+    virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+
+protected:
+    UPROPERTY()
+    TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
+
+    UPROPERTY()
+    TObjectPtr<UAttributeSet> AttributeSet;
+#pragma endregion
 };

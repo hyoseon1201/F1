@@ -2,8 +2,13 @@
 
 
 #include "Character/F1MonsterCharacter.h"
+#include "AbilitySystem/F1AbilitySystemComponent.h"
+#include "AbilitySystem/F1AttributeSet.h"
 
 AF1MonsterCharacter::AF1MonsterCharacter()
 {
-	SetGenericTeamId(FGenericTeamId(0));
+	AbilitySystemComponent = CreateDefaultSubobject<UF1AbilitySystemComponent>("AbilitySystemComponent");
+	AbilitySystemComponent->SetIsReplicated(true);
+
+	AttributeSet = CreateDefaultSubobject<UF1AttributeSet>("AttributeSet");
 }

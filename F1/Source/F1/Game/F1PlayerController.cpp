@@ -67,17 +67,13 @@ void AF1PlayerController::CursorTrace()
 {
     FHitResult CursorHit;
     GetHitResultUnderCursor(ECC_Visibility, false, CursorHit);
-    UE_LOG(LogTemp, Warning, TEXT("CursorTrace called"));
 
     if (!CursorHit.bBlockingHit)
     {
-        UE_LOG(LogTemp, Warning, TEXT("No blocking hit"));
         return;
     }
 
     AActor* HitActor = CursorHit.GetActor();
-    UE_LOG(LogTemp, Warning, TEXT("Hit Actor: %s"), HitActor ? *HitActor->GetName() : TEXT("None"));
-
     LastActor = ThisActor;
     ThisActor = nullptr;
 
@@ -87,11 +83,6 @@ void AF1PlayerController::CursorTrace()
         if (AF1CharacterBase* HitCharacter = Cast<AF1CharacterBase>(HitActor))
         {
             ThisActor = HitCharacter;
-            UE_LOG(LogTemp, Warning, TEXT("Cast to AF1CharacterBase SUCCESS: %s"), *HitCharacter->GetName());
-        }
-        else
-        {
-            UE_LOG(LogTemp, Warning, TEXT("Cast to AF1CharacterBase FAILED for: %s"), *HitActor->GetName());
         }
     }
 
@@ -99,33 +90,21 @@ void AF1PlayerController::CursorTrace()
     {
         if (ThisActor != nullptr)
         {
-            UE_LOG(LogTemp, Error, TEXT("Case B: Highlighting %s"), *ThisActor->GetName());
             ThisActor->HighlightActor();
         }
-        else
-        {
-            UE_LOG(LogTemp, Log, TEXT("Case A: Both actors null"));
-        }
     }
-    else // LastActor is valid
+    else
     {
         if (ThisActor == nullptr)
         {
-            UE_LOG(LogTemp, Error, TEXT("Case C: Unhighlighting %s"), *LastActor->GetName());
             LastActor->UnHighlightActor();
         }
-        else // both actors are valid
+        else
         {
             if (LastActor != ThisActor)
             {
-                UE_LOG(LogTemp, Error, TEXT("Case D: Switch from %s to %s"),
-                    *LastActor->GetName(), *ThisActor->GetName());
                 LastActor->UnHighlightActor();
                 ThisActor->HighlightActor();
-            }
-            else
-            {
-                UE_LOG(LogTemp, Log, TEXT("Case E: Same actor, no change"));
             }
         }
     }

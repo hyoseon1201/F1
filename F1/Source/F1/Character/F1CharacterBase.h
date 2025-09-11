@@ -3,12 +3,17 @@
 #include "GameFramework/Character.h"
 #include "GenericTeamAgentInterface.h"
 #include "Interaction/F1TeamOutlineInterface.h"
+#include "AbilitySystemInterface.h"
 #include "F1CharacterBase.generated.h"
+
+class UAbilitySystemComponent;
+class UAttributeSet;
 
 UCLASS()
 class F1_API AF1CharacterBase : public ACharacter,
     public IGenericTeamAgentInterface,
-    public IF1TeamOutlineInterface
+    public IF1TeamOutlineInterface,
+    public IAbilitySystemInterface
 {
     GENERATED_BODY()
 
@@ -39,5 +44,18 @@ public:
 
 private:
     bool IsEnemyToPlayer() const;
+#pragma endregion
+
+#pragma region GAS
+public:
+    virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+    UAttributeSet* GetAttributeSet() const { return AttributeSet; }
+
+protected:
+    UPROPERTY()
+    TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
+
+    UPROPERTY()
+    TObjectPtr<UAttributeSet> AttributeSet;
 #pragma endregion
 };

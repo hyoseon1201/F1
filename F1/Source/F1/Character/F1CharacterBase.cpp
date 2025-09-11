@@ -18,7 +18,7 @@ AF1CharacterBase::AF1CharacterBase()
     GetMesh()->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
 
     // ±âº» ÆÀ ¼³Á¤
-    TeamID = FGenericTeamId(1);
+    TeamID = FGenericTeamId(0);
 }
 
 void AF1CharacterBase::BeginPlay()
@@ -31,8 +31,6 @@ void AF1CharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
     DOREPLIFETIME(AF1CharacterBase, TeamID);
 }
-
-#pragma region Outline Interface Implementation
 
 void AF1CharacterBase::HighlightActor()
 {
@@ -78,4 +76,7 @@ bool AF1CharacterBase::IsEnemyToPlayer() const
     return true;
 }
 
-#pragma endregion
+UAbilitySystemComponent* AF1CharacterBase::GetAbilitySystemComponent() const
+{
+    return AbilitySystemComponent;
+}

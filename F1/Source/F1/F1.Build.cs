@@ -20,12 +20,12 @@ public class F1 : ModuleRules
 			"Engine", 
 			"InputCore", 
 			"EnhancedInput",
-            "NetCore"
+            "NetCore",
+            "GameplayAbilities"
         });
 
         PrivateDependencyModuleNames.AddRange(new string[]
 		{
-            "GameplayAbilities",
             "GameplayTasks",
             "GameplayTags",
             "UMG",

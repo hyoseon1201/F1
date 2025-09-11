@@ -16,4 +16,7 @@ AF1HeroCharacter::AF1HeroCharacter()
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationRoll = false;
 	bUseControllerRotationYaw = false;
+
+	// TEMP
+	SetGenericTeamId(FGenericTeamId(1));
 }
