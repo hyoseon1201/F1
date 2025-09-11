@@ -9,6 +9,7 @@ AF1MonsterCharacter::AF1MonsterCharacter()
 {
 	AbilitySystemComponent = CreateDefaultSubobject<UF1AbilitySystemComponent>("AbilitySystemComponent");
 	AbilitySystemComponent->SetIsReplicated(true);
+	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Minimal);
 
 	AttributeSet = CreateDefaultSubobject<UF1AttributeSet>("AttributeSet");
 }
