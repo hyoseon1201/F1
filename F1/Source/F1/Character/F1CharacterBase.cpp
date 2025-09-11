@@ -36,11 +36,10 @@ void AF1CharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 
 void AF1CharacterBase::HighlightActor()
 {
-    if (bHighlighted) return;  // 이미 하이라이트된 상태면 무시
+    if (bHighlighted) return;
 
     bHighlighted = true;
 
-    // Custom Depth 활성화 (Post Process Material 방식)
     GetMesh()->SetRenderCustomDepth(true);
 
     // 팀별 Stencil Value 설정 (1=Enemy Red, 2=Ally Blue)
@@ -50,18 +49,16 @@ void AF1CharacterBase::HighlightActor()
 
 void AF1CharacterBase::UnHighlightActor()
 {
-    if (!bHighlighted) return;  // 이미 비활성화된 상태면 무시
+    if (!bHighlighted) return;
 
     bHighlighted = false;
 
-    // Custom Depth 비활성화
     GetMesh()->SetRenderCustomDepth(false);
     GetMesh()->SetCustomDepthStencilValue(0);
 }
 
 bool AF1CharacterBase::IsEnemyToPlayer() const
 {
-    // 현재 플레이어와 팀 비교
     if (const UWorld* World = GetWorld())
     {
         if (APlayerController* PC = World->GetFirstPlayerController())
@@ -72,13 +69,12 @@ bool AF1CharacterBase::IsEnemyToPlayer() const
                 {
                     FGenericTeamId PlayerTeam = PlayerTeamAgent->GetGenericTeamId();
                     FGenericTeamId MyTeam = GetGenericTeamId();
-                    return PlayerTeam != MyTeam;  // 다른 팀이면 적
+                    return PlayerTeam != MyTeam;
                 }
             }
         }
     }
 
-    // 플레이어를 찾을 수 없으면 기본적으로 적으로 처리
     return true;
 }
 
