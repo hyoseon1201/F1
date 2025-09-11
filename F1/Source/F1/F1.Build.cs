@@ -19,8 +19,9 @@ public class F1 : ModuleRules
 			"CoreUObject", 
 			"Engine", 
 			"InputCore", 
-			"EnhancedInput" 
-		});
+			"EnhancedInput",
+            "NetCore"
+        });
 
         PrivateDependencyModuleNames.AddRange(new string[]
 		{

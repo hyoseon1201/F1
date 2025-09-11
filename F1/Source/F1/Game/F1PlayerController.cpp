@@ -4,10 +4,19 @@
 #include "Game/F1PlayerController.h"
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
+#include "Interaction/F1TeamOutlineInterface.h"
+#include "Character/F1CharacterBase.h"
 
 AF1PlayerController::AF1PlayerController()
 {
 	bReplicates = true;
+}
+
+void AF1PlayerController::PlayerTick(float DeltaTime)
+{
+	Super::PlayerTick(DeltaTime);
+
+	CursorTrace();
 }
 
 void AF1PlayerController::BeginPlay()
@@ -53,3 +62,73 @@ void AF1PlayerController::Move(const FInputActionValue& InputActionValue)
 		ControlledPawn->AddMovementInput(RightDirection, InputAxisVector.X);
 	}
 }
+
+void AF1PlayerController::CursorTrace()
+{
+    FHitResult CursorHit;
+    GetHitResultUnderCursor(ECC_Visibility, false, CursorHit);
+    UE_LOG(LogTemp, Warning, TEXT("CursorTrace called"));
+
+    if (!CursorHit.bBlockingHit)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("No blocking hit"));
+        return;
+    }
+
+    AActor* HitActor = CursorHit.GetActor();
+    UE_LOG(LogTemp, Warning, TEXT("Hit Actor: %s"), HitActor ? *HitActor->GetName() : TEXT("None"));
+
+    LastActor = ThisActor;
+    ThisActor = nullptr;
+
+    // 안전한 캐스팅 및 로깅
+    if (HitActor)
+    {
+        if (AF1CharacterBase* HitCharacter = Cast<AF1CharacterBase>(HitActor))
+        {
+            ThisActor = HitCharacter;
+            UE_LOG(LogTemp, Warning, TEXT("Cast to AF1CharacterBase SUCCESS: %s"), *HitCharacter->GetName());
+        }
+        else
+        {
+            UE_LOG(LogTemp, Warning, TEXT("Cast to AF1CharacterBase FAILED for: %s"), *HitActor->GetName());
+        }
+    }
+
+    if (LastActor == nullptr)
+    {
+        if (ThisActor != nullptr)
+        {
+            UE_LOG(LogTemp, Error, TEXT("Case B: Highlighting %s"), *ThisActor->GetName());
+            ThisActor->HighlightActor();
+        }
+        else
+        {
+            UE_LOG(LogTemp, Log, TEXT("Case A: Both actors null"));
+        }
+    }
+    else // LastActor is valid
+    {
+        if (ThisActor == nullptr)
+        {
+            UE_LOG(LogTemp, Error, TEXT("Case C: Unhighlighting %s"), *LastActor->GetName());
+            LastActor->UnHighlightActor();
+        }
+        else // both actors are valid
+        {
+            if (LastActor != ThisActor)
+            {
+                UE_LOG(LogTemp, Error, TEXT("Case D: Switch from %s to %s"),
+                    *LastActor->GetName(), *ThisActor->GetName());
+                LastActor->UnHighlightActor();
+                ThisActor->HighlightActor();
+            }
+            else
+            {
+                UE_LOG(LogTemp, Log, TEXT("Case E: Same actor, no change"));
+            }
+        }
+    }
+}
+
+
