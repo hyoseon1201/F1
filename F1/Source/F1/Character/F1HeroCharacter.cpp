@@ -25,7 +25,7 @@ AF1HeroCharacter::AF1HeroCharacter()
 
 void AF1HeroCharacter::PossessedBy(AController* NewController)
 {
-	Super::PossessedBy(Controller);
+	Super::PossessedBy(NewController);
 
 	InitAbilityActorInfo();
 }
