@@ -13,3 +13,10 @@ AF1MonsterCharacter::AF1MonsterCharacter()
 
 	AttributeSet = CreateDefaultSubobject<UF1AttributeSet>("AttributeSet");
 }
+
+void AF1MonsterCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+	
+	AbilitySystemComponent->InitAbilityActorInfo(this, this);
+}

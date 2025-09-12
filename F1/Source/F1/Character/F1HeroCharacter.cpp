@@ -5,6 +5,8 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Game/F1PlayerState.h"
+#include "AbilitySystemComponent.h"
 
 AF1HeroCharacter::AF1HeroCharacter()
 {
@@ -19,4 +21,27 @@ AF1HeroCharacter::AF1HeroCharacter()
 
 	// TEMP
 	SetGenericTeamId(FGenericTeamId(1));
+}
+
+void AF1HeroCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(Controller);
+
+	InitAbilityActorInfo();
+}
+
+void AF1HeroCharacter::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+
+	InitAbilityActorInfo();
+}
+
+void AF1HeroCharacter::InitAbilityActorInfo()
+{
+	AF1PlayerState* F1PlayerState = GetPlayerState<AF1PlayerState>();
+	check(F1PlayerState);
+	F1PlayerState->GetAbilitySystemComponent()->InitAbilityActorInfo(F1PlayerState, this);
+	AbilitySystemComponent = F1PlayerState->GetAbilitySystemComponent();
+	AttributeSet = F1PlayerState->GetAttributeSet();
 }

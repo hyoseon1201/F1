@@ -15,4 +15,10 @@ class F1_API AF1HeroCharacter : public AF1CharacterBase
 	GENERATED_BODY()
 public:
 	AF1HeroCharacter();
+
+	virtual void PossessedBy(AController* NewController) override;
+	virtual void OnRep_PlayerState() override;
+
+private:
+	void InitAbilityActorInfo();
 };

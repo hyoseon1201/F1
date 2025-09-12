@@ -15,4 +15,7 @@ class F1_API AF1MonsterCharacter : public AF1CharacterBase
 	GENERATED_BODY()
 public:
 	AF1MonsterCharacter();
+
+protected:
+	virtual void BeginPlay() override;
 };
