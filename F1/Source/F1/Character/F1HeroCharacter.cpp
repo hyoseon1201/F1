@@ -7,6 +7,8 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Game/F1PlayerState.h"
 #include "AbilitySystemComponent.h"
+#include "Game/F1PlayerController.h"
+#include "UI/HUD/F1HUD.h"
 
 AF1HeroCharacter::AF1HeroCharacter()
 {
@@ -44,4 +46,12 @@ void AF1HeroCharacter::InitAbilityActorInfo()
 	F1PlayerState->GetAbilitySystemComponent()->InitAbilityActorInfo(F1PlayerState, this);
 	AbilitySystemComponent = F1PlayerState->GetAbilitySystemComponent();
 	AttributeSet = F1PlayerState->GetAttributeSet();
+
+	if (AF1PlayerController* F1PlayerController = Cast<AF1PlayerController>(GetController()))
+	{
+		if (AF1HUD* AuraHUD = Cast<AF1HUD>(F1PlayerController->GetHUD()))
+		{
+			AuraHUD->InitOverlay(F1PlayerController, F1PlayerState, AbilitySystemComponent, AttributeSet);
+		}
+	}
 }
