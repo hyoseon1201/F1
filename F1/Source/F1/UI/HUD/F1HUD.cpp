@@ -30,6 +30,7 @@ void AF1HUD::InitOverlay(APlayerController* PC, APlayerState* PS, UAbilitySystem
 	UF1OverlayWidgetController* WidgetController = GetOverlayWidgetController(WidgetControllerParams);
 
 	OverlayWidget->SetWidgetController(WidgetController);
+	WidgetController->BroadcastInitialValues();
 
 	Widget->AddToViewport();
 }
