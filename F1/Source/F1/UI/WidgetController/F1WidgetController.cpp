@@ -14,3 +14,7 @@ void UF1WidgetController::SetWidgetControllerParams(const FWidgetControllerParam
 void UF1WidgetController::BroadcastInitialValues()
 {
 }
+
+void UF1WidgetController::BindCallbacksToDependencies()
+{
+}

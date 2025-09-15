@@ -7,55 +7,29 @@
 #include "AbilitySystem/F1AttributeSet.h"
 #include "AbilitySystemComponent.h"
 #include "GameplayEffect.h"
+#include "AbilitySystemBlueprintLibrary.h"
 
 AF1GameplayEffectActor::AF1GameplayEffectActor()
 {
 	PrimaryActorTick.bCanEverTick = false;
 
-	Mesh = CreateDefaultSubobject<UStaticMeshComponent>("Mesh");
-	SetRootComponent(Mesh);
-
-	Sphere = CreateDefaultSubobject<USphereComponent>("Sphere");
-	Sphere->SetupAttachment(GetRootComponent());
-}
-
-void AF1GameplayEffectActor::OnOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
-{
-    if (InstantGameplayEffectClass && OtherActor)
-    {
-        if (IAbilitySystemInterface* ASCInterface = Cast<IAbilitySystemInterface>(OtherActor))
-        {
-            UAbilitySystemComponent* TargetASC = ASCInterface->GetAbilitySystemComponent();
-            if (TargetASC)
-            {
-                FGameplayEffectContextHandle EffectContext = TargetASC->MakeEffectContext();
-                EffectContext.AddSourceObject(this);
-
-                FGameplayEffectSpecHandle EffectSpec = TargetASC->MakeOutgoingSpec(
-                    InstantGameplayEffectClass,
-                    1.0f,  // Level
-                    EffectContext
-                );
-
-                if (EffectSpec.IsValid())
-                {
-                    TargetASC->ApplyGameplayEffectSpecToSelf(*EffectSpec.Data.Get());
-                    Destroy();
-                }
-            }
-        }
-    }
-}
-
-
-void AF1GameplayEffectActor::EndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
-{
+	SetRootComponent(CreateDefaultSubobject<USceneComponent>("SceneRoot"));
 }
 
 void AF1GameplayEffectActor::BeginPlay()
 {
 	Super::BeginPlay();
-
-	Sphere->OnComponentBeginOverlap.AddDynamic(this, &AF1GameplayEffectActor::OnOverlap);
-	Sphere->OnComponentEndOverlap.AddDynamic(this, &AF1GameplayEffectActor::EndOverlap);
 }
+
+void AF1GameplayEffectActor::ApplyEffectToTarget(AActor* Target, TSubclassOf<UGameplayEffect> GameplayEffectClass)
+{
+	UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Target);
+	if (TargetASC == nullptr) return;
+
+	check(GameplayEffectClass);
+	FGameplayEffectContextHandle EffectContextHandle = TargetASC->MakeEffectContext();
+	EffectContextHandle.AddSourceObject(this);
+	const FGameplayEffectSpecHandle EffectSpecHandle = TargetASC->MakeOutgoingSpec(GameplayEffectClass, 1.f, EffectContextHandle);
+	TargetASC->ApplyGameplayEffectSpecToSelf(*EffectSpecHandle.Data.Get());
+}
+

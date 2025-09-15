@@ -6,10 +6,10 @@
 UF1AttributeSet::UF1AttributeSet()
 {
 	// 기본 생존 능력치 초기화
-	InitHealth(100.f);
+	InitHealth(50.f);
 	InitMaxHealth(100.f);
 	InitHealthRegeneration(1.0f);
-	InitMana(50.f);
+	InitMana(25.f);
 	InitMaxMana(50.f);
 	InitManaRegeneration(1.0f);
 
