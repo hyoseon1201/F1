@@ -12,6 +12,40 @@
 	GAMEPLAYATTRIBUTE_VALUE_SETTER(PropertyName) \
 	GAMEPLAYATTRIBUTE_VALUE_INITTER(PropertyName)
 
+USTRUCT()
+struct FEffectProperties
+{
+	GENERATED_BODY()
+
+	FEffectProperties() {}
+
+	FGameplayEffectContextHandle EffectContextHandle;
+
+	UPROPERTY()
+	UAbilitySystemComponent* SourceASC = nullptr;
+
+	UPROPERTY()
+	AActor* SourceAvatarActor = nullptr;
+
+	UPROPERTY()
+	AController* SourceController = nullptr;
+
+	UPROPERTY()
+	ACharacter* SourceCharacter = nullptr;
+
+	UPROPERTY()
+	UAbilitySystemComponent* TargetASC = nullptr;
+
+	UPROPERTY()
+	AActor* TargetAvatarActor = nullptr;
+
+	UPROPERTY()
+	AController* TargetController = nullptr;
+
+	UPROPERTY()
+	ACharacter* TargetCharacter = nullptr;
+};
+
 /**
  *
  */
@@ -20,10 +54,8 @@ class F1_API UF1AttributeSet : public UAttributeSet
 {
 	GENERATED_BODY()
 
+#pragma region Attributes
 public:
-	UF1AttributeSet();
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
 	// ===========================================
 	// 기본 생존 능력치 (Vital Stats)
 	// ===========================================
@@ -135,10 +167,19 @@ public:
 	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_AttackRange, Category = "Range Attributes")
 	FGameplayAttributeData AttackRange;
 	ATTRIBUTE_ACCESSORS(UF1AttributeSet, AttackRange);
+#pragma endregion
 
-	// ===========================================
-	// OnRep 함수들
-	// ===========================================
+public:
+
+	UF1AttributeSet();
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
+	virtual void PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data) override;
+
+#pragma region Onrep_Func
+
+public:
 	UFUNCTION()
 	void OnRep_Health(const FGameplayAttributeData& OldHealth) const;
 
@@ -204,4 +245,8 @@ public:
 
 	UFUNCTION()
 	void OnRep_AttackRange(const FGameplayAttributeData& OldAttackRange) const;
+#pragma endregion
+
+private:
+	void SetEffectProperties(const FGameplayEffectModCallbackData& Data, FEffectProperties& Props) const;
 };

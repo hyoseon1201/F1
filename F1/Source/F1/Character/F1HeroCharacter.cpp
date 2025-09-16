@@ -43,15 +43,19 @@ void AF1HeroCharacter::InitAbilityActorInfo()
 {
 	AF1PlayerState* F1PlayerState = GetPlayerState<AF1PlayerState>();
 	check(F1PlayerState);
+
 	F1PlayerState->GetAbilitySystemComponent()->InitAbilityActorInfo(F1PlayerState, this);
 	AbilitySystemComponent = F1PlayerState->GetAbilitySystemComponent();
 	AttributeSet = F1PlayerState->GetAttributeSet();
 
-	if (AF1PlayerController* F1PlayerController = Cast<AF1PlayerController>(GetController()))
+	if (IsLocallyControlled())
 	{
-		if (AF1HUD* AuraHUD = Cast<AF1HUD>(F1PlayerController->GetHUD()))
+		if (AF1PlayerController* F1PlayerController = Cast<AF1PlayerController>(GetController()))
 		{
-			AuraHUD->InitOverlay(F1PlayerController, F1PlayerState, AbilitySystemComponent, AttributeSet);
+			if (AF1HUD* F1HUD = Cast<AF1HUD>(F1PlayerController->GetHUD()))
+			{
+				F1HUD->InitOverlay(F1PlayerController, F1PlayerState, AbilitySystemComponent, AttributeSet);
+			}
 		}
 	}
 }

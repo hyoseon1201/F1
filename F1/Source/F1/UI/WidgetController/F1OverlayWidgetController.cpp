@@ -27,7 +27,9 @@ void UF1OverlayWidgetController::BindCallbacksToDependencies()
 
 void UF1OverlayWidgetController::HealthChanged(const FOnAttributeChangeData& Data) const
 {
-	OnHealthChanged.Broadcast(Data.NewValue);
+	const UF1AttributeSet* F1AttributeSet = CastChecked<UF1AttributeSet>(AttributeSet);
+	float SafeHealth = FMath::Clamp(Data.NewValue, 0.0f, F1AttributeSet->GetMaxHealth());
+	OnHealthChanged.Broadcast(SafeHealth);
 }
 
 void UF1OverlayWidgetController::MaxHealthChanged(const FOnAttributeChangeData& Data) const
@@ -37,7 +39,9 @@ void UF1OverlayWidgetController::MaxHealthChanged(const FOnAttributeChangeData& 
 
 void UF1OverlayWidgetController::ManaChanged(const FOnAttributeChangeData& Data) const
 {
-	OnManaChanged.Broadcast(Data.NewValue);
+	const UF1AttributeSet* F1AttributeSet = CastChecked<UF1AttributeSet>(AttributeSet);
+	float SafeMana = FMath::Clamp(Data.NewValue, 0.0f, F1AttributeSet->GetMaxMana());
+	OnManaChanged.Broadcast(SafeMana);
 }
 
 void UF1OverlayWidgetController::MaxManaChanged(const FOnAttributeChangeData& Data) const
