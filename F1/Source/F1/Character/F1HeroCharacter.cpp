@@ -60,4 +60,9 @@ void AF1HeroCharacter::InitAbilityActorInfo()
 			}
 		}
 	}
+
+	if (HasAuthority())
+	{
+		InitializeDefaultAttributes();
+	}
 }

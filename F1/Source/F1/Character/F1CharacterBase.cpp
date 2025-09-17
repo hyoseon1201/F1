@@ -3,6 +3,7 @@
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "Net/UnrealNetwork.h"
+#include "AbilitySystemComponent.h"
 
 AF1CharacterBase::AF1CharacterBase()
 {
@@ -83,4 +84,13 @@ bool AF1CharacterBase::IsEnemyToPlayer() const
 UAbilitySystemComponent* AF1CharacterBase::GetAbilitySystemComponent() const
 {
     return AbilitySystemComponent;
+}
+
+void AF1CharacterBase::InitializeDefaultAttributes()
+{
+    check(IsValid(GetAbilitySystemComponent()));
+    check(DefaultAttributes);
+    const FGameplayEffectContextHandle ContextHandle = GetAbilitySystemComponent()->MakeEffectContext();
+    const FGameplayEffectSpecHandle SpecHandle = GetAbilitySystemComponent()->MakeOutgoingSpec(DefaultAttributes, 1.f, ContextHandle);
+    GetAbilitySystemComponent()->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
 }
