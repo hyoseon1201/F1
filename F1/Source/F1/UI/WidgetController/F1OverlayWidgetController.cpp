@@ -1,92 +1,38 @@
 // Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "UI/WidgetController/F1OverlayWidgetController.h"
 #include "AbilitySystem/F1AttributeSet.h"
 #include "AbilitySystem/F1AbilitySystemComponent.h"
+#include "GameplayTag/F1GameplayTags.h"
 
 void UF1OverlayWidgetController::BroadcastInitialValues()
 {
 	const UF1AttributeSet* F1AttributeSet = CastChecked<UF1AttributeSet>(AttributeSet);
 
-	// 바이탈
-	OnHealthChanged.Broadcast(F1AttributeSet->GetHealth());
-	OnMaxHealthChanged.Broadcast(F1AttributeSet->GetMaxHealth());
-	OnManaChanged.Broadcast(F1AttributeSet->GetMana());
-	OnMaxManaChanged.Broadcast(F1AttributeSet->GetMaxMana());
+	InitializeAttributeTagMap();
 
-	// 공격 능력치
-	OnAttackDamageChanged.Broadcast(F1AttributeSet->GetAttackDamage());
-	OnAttackSpeedChanged.Broadcast(F1AttributeSet->GetAttackSpeed());
-	OnAbilityPowerChanged.Broadcast(F1AttributeSet->GetAbilityPower());
-	OnCriticalStrikeChanceChanged.Broadcast(F1AttributeSet->GetCriticalStrikeChance());
-	OnCriticalStrikeDamageChanged.Broadcast(F1AttributeSet->GetCriticalStrikeDamage());
-
-	// 방어 능력치
-	OnArmorChanged.Broadcast(F1AttributeSet->GetArmor());
-	OnMagicResistanceChanged.Broadcast(F1AttributeSet->GetMagicResistance());
-
-	// 이동 및 유틸리티
-	OnMovementSpeedChanged.Broadcast(F1AttributeSet->GetMovementSpeed());
-	OnAbilityHasteChanged.Broadcast(F1AttributeSet->GetAbilityHaste());
-
-	// 관통력
-	OnArmorPenetrationChanged.Broadcast(F1AttributeSet->GetArmorPenetration());
-	OnMagicPenetrationChanged.Broadcast(F1AttributeSet->GetMagicPenetration());
-
-	// 흡혈
-	OnLifeStealChanged.Broadcast(F1AttributeSet->GetLifeSteal());
-	OnOmnivampChanged.Broadcast(F1AttributeSet->GetOmnivamp());
-
-	// 저항력
-	OnTenacityChanged.Broadcast(F1AttributeSet->GetTenacity());
-	OnSlowResistanceChanged.Broadcast(F1AttributeSet->GetSlowResistance());
-
-	// 사거리
-	OnAttackRangeChanged.Broadcast(F1AttributeSet->GetAttackRange());
+	for (const auto& [Attribute, Tag] : AttributeTagMap)
+	{
+		float AttributeValue = AbilitySystemComponent->GetNumericAttribute(Attribute);
+		OnAttributeChanged.Broadcast(Tag, AttributeValue);
+	}
 }
 
 void UF1OverlayWidgetController::BindCallbacksToDependencies()
 {
-	const UF1AttributeSet* F1AttributeSet = CastChecked<UF1AttributeSet>(AttributeSet);
+	InitializeAttributeTagMap();
 
-	// 바이탈 바인딩
-	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetHealthAttribute()).AddUObject(this, &UF1OverlayWidgetController::HealthChanged);
-	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetMaxHealthAttribute()).AddUObject(this, &UF1OverlayWidgetController::MaxHealthChanged);
-	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetManaAttribute()).AddUObject(this, &UF1OverlayWidgetController::ManaChanged);
-	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetMaxManaAttribute()).AddUObject(this, &UF1OverlayWidgetController::MaxManaChanged);
+	for (const auto& [Attribute, Tag] : AttributeTagMap)
+	{
+		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(Attribute).AddLambda(
+			[this, Tag](const FOnAttributeChangeData& Data)
+			{
+				float FinalValue = GetClampedAttributeValue(Data, Tag);
+				OnAttributeChanged.Broadcast(Tag, FinalValue);
+			}
+		);
+	}
 
-	// 공격 능력치 바인딩
-	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetAttackDamageAttribute()).AddUObject(this, &UF1OverlayWidgetController::AttackDamageChanged);
-	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetAttackSpeedAttribute()).AddUObject(this, &UF1OverlayWidgetController::AttackSpeedChanged);
-	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetAbilityPowerAttribute()).AddUObject(this, &UF1OverlayWidgetController::AbilityPowerChanged);
-	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetCriticalStrikeChanceAttribute()).AddUObject(this, &UF1OverlayWidgetController::CriticalStrikeChanceChanged);
-	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetCriticalStrikeDamageAttribute()).AddUObject(this, &UF1OverlayWidgetController::CriticalStrikeDamageChanged);
-
-	// 방어 능력치 바인딩
-	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetArmorAttribute()).AddUObject(this, &UF1OverlayWidgetController::ArmorChanged);
-	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetMagicResistanceAttribute()).AddUObject(this, &UF1OverlayWidgetController::MagicResistanceChanged);
-
-	// 이동 및 유틸리티 바인딩
-	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetMovementSpeedAttribute()).AddUObject(this, &UF1OverlayWidgetController::MovementSpeedChanged);
-	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetAbilityHasteAttribute()).AddUObject(this, &UF1OverlayWidgetController::AbilityHasteChanged);
-
-	// 관통력 바인딩
-	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetArmorPenetrationAttribute()).AddUObject(this, &UF1OverlayWidgetController::ArmorPenetrationChanged);
-	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetMagicPenetrationAttribute()).AddUObject(this, &UF1OverlayWidgetController::MagicPenetrationChanged);
-
-	// 흡혈 바인딩
-	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetLifeStealAttribute()).AddUObject(this, &UF1OverlayWidgetController::LifeStealChanged);
-	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetOmnivampAttribute()).AddUObject(this, &UF1OverlayWidgetController::OmnivampChanged);
-
-	// 저항력 바인딩
-	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetTenacityAttribute()).AddUObject(this, &UF1OverlayWidgetController::TenacityChanged);
-	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetSlowResistanceAttribute()).AddUObject(this, &UF1OverlayWidgetController::SlowResistanceChanged);
-
-	// 사거리 바인딩
-	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetAttackRangeAttribute()).AddUObject(this, &UF1OverlayWidgetController::AttackRangeChanged);
-
-
+	// EffectAssetTags 람다
 	Cast<UF1AbilitySystemComponent>(AbilitySystemComponent)->EffectAssetTags.AddLambda(
 		[](const FGameplayTagContainer& AssetTags)
 		{
@@ -99,106 +45,73 @@ void UF1OverlayWidgetController::BindCallbacksToDependencies()
 	);
 }
 
-void UF1OverlayWidgetController::HealthChanged(const FOnAttributeChangeData& Data) const
+void UF1OverlayWidgetController::InitializeAttributeTagMap()
 {
 	const UF1AttributeSet* F1AttributeSet = CastChecked<UF1AttributeSet>(AttributeSet);
-	float SafeHealth = FMath::Clamp(Data.NewValue, 0.0f, F1AttributeSet->GetMaxHealth());
-	OnHealthChanged.Broadcast(SafeHealth);
+	const FF1GameplayTags& GameplayTags = FF1GameplayTags::Get();
+
+	AttributeTagMap = {
+		// 생존 능력치
+		{F1AttributeSet->GetHealthAttribute(), GameplayTags.Attributes_Vital_Health},
+		{F1AttributeSet->GetMaxHealthAttribute(), GameplayTags.Attributes_Vital_MaxHealth},
+		{F1AttributeSet->GetHealthRegenerationAttribute(), GameplayTags.Attributes_Vital_HealthRegeneration},
+		{F1AttributeSet->GetManaAttribute(), GameplayTags.Attributes_Vital_Mana},
+		{F1AttributeSet->GetMaxManaAttribute(), GameplayTags.Attributes_Vital_MaxMana},
+		{F1AttributeSet->GetManaRegenerationAttribute(), GameplayTags.Attributes_Vital_ManaRegeneration},
+
+		// 공격 능력치
+		{F1AttributeSet->GetAttackDamageAttribute(), GameplayTags.Attributes_Offensive_AttackDamage},
+		{F1AttributeSet->GetAttackSpeedAttribute(), GameplayTags.Attributes_Offensive_AttackSpeed},
+		{F1AttributeSet->GetAbilityPowerAttribute(), GameplayTags.Attributes_Offensive_AbilityPower},
+		{F1AttributeSet->GetCriticalStrikeChanceAttribute(), GameplayTags.Attributes_Offensive_CriticalStrikeChance},
+		{F1AttributeSet->GetCriticalStrikeDamageAttribute(), GameplayTags.Attributes_Offensive_CriticalStrikeDamage},
+
+		// 방어 능력치
+		{F1AttributeSet->GetArmorAttribute(), GameplayTags.Attributes_Defensive_Armor},
+		{F1AttributeSet->GetMagicResistanceAttribute(), GameplayTags.Attributes_Defensive_MagicResistance},
+
+		// 이동 및 유틸리티
+		{F1AttributeSet->GetMovementSpeedAttribute(), GameplayTags.Attributes_Movement_Speed},
+		{F1AttributeSet->GetAbilityHasteAttribute(), GameplayTags.Attributes_Utility_AbilityHaste},
+
+		// 관통력
+		{F1AttributeSet->GetArmorPenetrationAttribute(), GameplayTags.Attributes_Penetration_Armor},
+		{F1AttributeSet->GetMagicPenetrationAttribute(), GameplayTags.Attributes_Penetration_Magic},
+
+		// 흡혈
+		{F1AttributeSet->GetLifeStealAttribute(), GameplayTags.Attributes_Sustain_LifeSteal},
+		{F1AttributeSet->GetOmnivampAttribute(), GameplayTags.Attributes_Sustain_Omnivamp},
+
+		// 저항력
+		{F1AttributeSet->GetTenacityAttribute(), GameplayTags.Attributes_Resistance_Tenacity},
+		{F1AttributeSet->GetSlowResistanceAttribute(), GameplayTags.Attributes_Resistance_SlowResistance},
+
+		// 사거리
+		{F1AttributeSet->GetAttackRangeAttribute(), GameplayTags.Attributes_Range_Attack}
+	};
 }
 
-void UF1OverlayWidgetController::MaxHealthChanged(const FOnAttributeChangeData& Data) const
-{
-	OnMaxHealthChanged.Broadcast(Data.NewValue);
-}
-
-void UF1OverlayWidgetController::ManaChanged(const FOnAttributeChangeData& Data) const
+float UF1OverlayWidgetController::GetClampedAttributeValue(const FOnAttributeChangeData& Data, const FGameplayTag& AttributeTag) const
 {
 	const UF1AttributeSet* F1AttributeSet = CastChecked<UF1AttributeSet>(AttributeSet);
-	float SafeMana = FMath::Clamp(Data.NewValue, 0.0f, F1AttributeSet->GetMaxMana());
-	OnManaChanged.Broadcast(SafeMana);
-}
+	const FF1GameplayTags& GameplayTags = FF1GameplayTags::Get();
 
-void UF1OverlayWidgetController::MaxManaChanged(const FOnAttributeChangeData& Data) const
-{
-	OnMaxManaChanged.Broadcast(Data.NewValue);
-}
-
-void UF1OverlayWidgetController::AttackDamageChanged(const FOnAttributeChangeData& Data) const
-{
-	OnAttackDamageChanged.Broadcast(Data.NewValue);
-}
-
-void UF1OverlayWidgetController::AttackSpeedChanged(const FOnAttributeChangeData& Data) const
-{
-	OnAttackSpeedChanged.Broadcast(Data.NewValue);
-}
-
-void UF1OverlayWidgetController::AbilityPowerChanged(const FOnAttributeChangeData& Data) const
-{
-	OnAbilityPowerChanged.Broadcast(Data.NewValue);
-}
-
-void UF1OverlayWidgetController::CriticalStrikeChanceChanged(const FOnAttributeChangeData& Data) const
-{
-	OnCriticalStrikeChanceChanged.Broadcast(Data.NewValue);
-}
-
-void UF1OverlayWidgetController::CriticalStrikeDamageChanged(const FOnAttributeChangeData& Data) const
-{
-	OnCriticalStrikeDamageChanged.Broadcast(Data.NewValue);
-}
-
-void UF1OverlayWidgetController::ArmorChanged(const FOnAttributeChangeData& Data) const
-{
-	OnArmorChanged.Broadcast(Data.NewValue);
-}
-
-void UF1OverlayWidgetController::MagicResistanceChanged(const FOnAttributeChangeData& Data) const
-{
-	OnMagicResistanceChanged.Broadcast(Data.NewValue);
-}
-
-void UF1OverlayWidgetController::MovementSpeedChanged(const FOnAttributeChangeData& Data) const
-{
-	OnMovementSpeedChanged.Broadcast(Data.NewValue);
-}
-
-void UF1OverlayWidgetController::AbilityHasteChanged(const FOnAttributeChangeData& Data) const
-{
-	OnAbilityHasteChanged.Broadcast(Data.NewValue);
-}
-
-void UF1OverlayWidgetController::ArmorPenetrationChanged(const FOnAttributeChangeData& Data) const
-{
-	OnArmorPenetrationChanged.Broadcast(Data.NewValue);
-}
-
-void UF1OverlayWidgetController::MagicPenetrationChanged(const FOnAttributeChangeData& Data) const
-{
-	OnMagicPenetrationChanged.Broadcast(Data.NewValue);
-}
-
-void UF1OverlayWidgetController::LifeStealChanged(const FOnAttributeChangeData& Data) const
-{
-	OnLifeStealChanged.Broadcast(Data.NewValue);
-}
-
-void UF1OverlayWidgetController::OmnivampChanged(const FOnAttributeChangeData& Data) const
-{
-	OnOmnivampChanged.Broadcast(Data.NewValue);
-}
-
-void UF1OverlayWidgetController::TenacityChanged(const FOnAttributeChangeData& Data) const
-{
-	OnTenacityChanged.Broadcast(Data.NewValue);
-}
-
-void UF1OverlayWidgetController::SlowResistanceChanged(const FOnAttributeChangeData& Data) const
-{
-	OnSlowResistanceChanged.Broadcast(Data.NewValue);
-}
-
-void UF1OverlayWidgetController::AttackRangeChanged(const FOnAttributeChangeData& Data) const
-{
-	OnAttackRangeChanged.Broadcast(Data.NewValue);
+	if (AttributeTag.MatchesTagExact(GameplayTags.Attributes_Vital_Health))
+	{
+		return FMath::Clamp(Data.NewValue, 0.0f, F1AttributeSet->GetMaxHealth());
+	}
+	else if (AttributeTag.MatchesTagExact(GameplayTags.Attributes_Vital_Mana))
+	{
+		return FMath::Clamp(Data.NewValue, 0.0f, F1AttributeSet->GetMaxMana());
+	}
+	else if (AttributeTag.MatchesTagExact(GameplayTags.Attributes_Offensive_CriticalStrikeChance) ||
+		AttributeTag.MatchesTagExact(GameplayTags.Attributes_Sustain_LifeSteal) ||
+		AttributeTag.MatchesTagExact(GameplayTags.Attributes_Sustain_Omnivamp))
+	{
+		return FMath::Clamp(Data.NewValue, 0.0f, 100.0f);
+	}
+	else
+	{
+		return Data.NewValue;
+	}
 }
