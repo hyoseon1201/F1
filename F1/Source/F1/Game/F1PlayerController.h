@@ -35,7 +35,9 @@ private:
 
 	void Move(const struct FInputActionValue& InputActionValue);
 
-#pragma region outlining
+	// ===========================================
+	// Outlining
+	// ===========================================
 private:
 	void CursorTrace();
 
@@ -44,5 +46,4 @@ private:
 
 	UPROPERTY()
 	AF1CharacterBase* ThisActor;
-#pragma endregion
 };

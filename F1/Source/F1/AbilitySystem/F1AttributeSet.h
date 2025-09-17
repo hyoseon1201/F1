@@ -54,7 +54,6 @@ class F1_API UF1AttributeSet : public UAttributeSet
 {
 	GENERATED_BODY()
 
-#pragma region Attributes
 public:
 	// ===========================================
 	// 기본 생존 능력치 (Vital Stats)
@@ -167,7 +166,6 @@ public:
 	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_AttackRange, Category = "Range Attributes")
 	FGameplayAttributeData AttackRange;
 	ATTRIBUTE_ACCESSORS(UF1AttributeSet, AttackRange);
-#pragma endregion
 
 public:
 
@@ -177,8 +175,9 @@ public:
 	virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
 	virtual void PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data) override;
 
-#pragma region Onrep_Func
-
+	// ===========================================
+	// OnRep_Func
+	// ===========================================
 public:
 	UFUNCTION()
 	void OnRep_Health(const FGameplayAttributeData& OldHealth) const;
@@ -245,7 +244,6 @@ public:
 
 	UFUNCTION()
 	void OnRep_AttackRange(const FGameplayAttributeData& OldAttackRange) const;
-#pragma endregion
 
 private:
 	void SetEffectProperties(const FGameplayEffectModCallbackData& Data, FEffectProperties& Props) const;

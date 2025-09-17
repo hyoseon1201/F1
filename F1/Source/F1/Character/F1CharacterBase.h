@@ -24,7 +24,9 @@ protected:
     virtual void BeginPlay() override;
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-#pragma region Team System
+    // ===========================================
+    // Team system
+    // ===========================================
 public:
     virtual void SetGenericTeamId(const FGenericTeamId& NewTeamID) { TeamID = NewTeamID; }
     virtual FGenericTeamId GetGenericTeamId() const { return TeamID; }
@@ -32,9 +34,10 @@ public:
 protected:
     UPROPERTY(Replicated, EditAnywhere, BlueprintReadOnly, Category = "Team")
     FGenericTeamId TeamID = FGenericTeamId::NoTeam;
-#pragma endregion
 
-#pragma region Outline Interface
+    // ===========================================
+    // Outline Interface
+    // ===========================================
 public:
     virtual void HighlightActor() override;
     virtual void UnHighlightActor() override;
@@ -44,9 +47,11 @@ public:
 
 private:
     bool IsEnemyToPlayer() const;
-#pragma endregion
 
-#pragma region GAS
+
+    // ===========================================
+    // GAS
+    // ===========================================
 public:
     virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
     UAttributeSet* GetAttributeSet() const { return AttributeSet; }
@@ -57,5 +62,4 @@ protected:
 
     UPROPERTY()
     TObjectPtr<UAttributeSet> AttributeSet;
-#pragma endregion
 };

@@ -8,6 +8,8 @@
 
 UF1AttributeSet::UF1AttributeSet()
 {
+	// TEMP
+
 	// 기본 생존 능력치 초기화
 	InitHealth(50.f);
 	InitMaxHealth(100.f);
@@ -18,17 +20,17 @@ UF1AttributeSet::UF1AttributeSet()
 
 	// 공격 능력치 초기화
 	InitAttackDamage(60.f);
-	InitAttackSpeed(0.625f);  // LOL 기본 공속
+	InitAttackSpeed(0.625f);
 	InitAbilityPower(0.f);
 	InitCriticalStrikeChance(0.f);
-	InitCriticalStrikeDamage(200.f);  // 치명타 기본 200%
+	InitCriticalStrikeDamage(200.f);
 
 	// 방어 능력치 초기화
 	InitArmor(30.f);
 	InitMagicResistance(30.f);
 
 	// 이동 및 유틸리티 초기화
-	InitMovementSpeed(325.f);  // LOL 기본 이속
+	InitMovementSpeed(325.f);
 	InitAbilityHaste(0.f);
 
 	// 관통력 초기화
@@ -44,7 +46,7 @@ UF1AttributeSet::UF1AttributeSet()
 	InitSlowResistance(0.f);
 
 	// 사거리 초기화
-	InitAttackRange(125.f);  // 근접 캐릭터 기본 사거리
+	InitAttackRange(125.f);
 }
 
 void UF1AttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

@@ -21,7 +21,9 @@ class F1_API AF1PlayerState : public APlayerState,
 public:
 	AF1PlayerState();
 
-#pragma region GAS
+    // ===========================================
+    // GAS
+    // ===========================================
 public:
     virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
     UAttributeSet* GetAttributeSet() const { return AttributeSet; }
@@ -32,5 +34,4 @@ protected:
 
     UPROPERTY()
     TObjectPtr<UAttributeSet> AttributeSet;
-#pragma endregion
 };
