@@ -2,35 +2,203 @@
 #include "UI/WidgetController/F1OverlayWidgetController.h"
 #include "AbilitySystem/F1AttributeSet.h"
 #include "AbilitySystem/F1AbilitySystemComponent.h"
-#include "GameplayTag/F1GameplayTags.h"
 
 void UF1OverlayWidgetController::BroadcastInitialValues()
 {
 	const UF1AttributeSet* F1AttributeSet = CastChecked<UF1AttributeSet>(AttributeSet);
 
-	InitializeAttributeTagMap();
+	OnHealthChanged.Broadcast(F1AttributeSet->GetHealth());
+	OnMaxHealthChanged.Broadcast(F1AttributeSet->GetMaxHealth());
+	OnManaChanged.Broadcast(F1AttributeSet->GetMana());
+	OnMaxManaChanged.Broadcast(F1AttributeSet->GetMaxMana());
+	OnHealthRegenerationChanged.Broadcast(F1AttributeSet->GetHealthRegeneration());
+	OnManaRegenerationChanged.Broadcast(F1AttributeSet->GetManaRegeneration());
 
-	for (const auto& [Attribute, Tag] : AttributeTagMap)
-	{
-		float AttributeValue = AbilitySystemComponent->GetNumericAttribute(Attribute);
-		OnAttributeChanged.Broadcast(Tag, AttributeValue);
-	}
+	OnAttackDamageChanged.Broadcast(F1AttributeSet->GetAttackDamage());
+	OnAttackSpeedChanged.Broadcast(F1AttributeSet->GetAttackSpeed());
+	OnAbilityPowerChanged.Broadcast(F1AttributeSet->GetAbilityPower());
+	OnCriticalStrikeChanceChanged.Broadcast(F1AttributeSet->GetCriticalStrikeChance());
+	OnCriticalStrikeDamageChanged.Broadcast(F1AttributeSet->GetCriticalStrikeDamage());
+
+	OnArmorChanged.Broadcast(F1AttributeSet->GetArmor());
+	OnMagicResistanceChanged.Broadcast(F1AttributeSet->GetMagicResistance());
+
+	OnMovementSpeedChanged.Broadcast(F1AttributeSet->GetMovementSpeed());
+	OnAbilityHasteChanged.Broadcast(F1AttributeSet->GetAbilityHaste());
+
+	OnArmorPenetrationChanged.Broadcast(F1AttributeSet->GetArmorPenetration());
+	OnMagicPenetrationChanged.Broadcast(F1AttributeSet->GetMagicPenetration());
+
+	OnLifeStealChanged.Broadcast(F1AttributeSet->GetLifeSteal());
+	OnOmnivampChanged.Broadcast(F1AttributeSet->GetOmnivamp());
+
+	OnTenacityChanged.Broadcast(F1AttributeSet->GetTenacity());
+	OnSlowResistanceChanged.Broadcast(F1AttributeSet->GetSlowResistance());
+
+	OnAttackRangeChanged.Broadcast(F1AttributeSet->GetAttackRange());
 }
 
 void UF1OverlayWidgetController::BindCallbacksToDependencies()
 {
-	InitializeAttributeTagMap();
+	const UF1AttributeSet* F1AttributeSet = CastChecked<UF1AttributeSet>(AttributeSet);
 
-	for (const auto& [Attribute, Tag] : AttributeTagMap)
-	{
-		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(Attribute).AddLambda(
-			[this, Tag](const FOnAttributeChangeData& Data)
+	// Health - 클램핑 처리
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetHealthAttribute())
+		.AddLambda([this](const FOnAttributeChangeData& Data)
 			{
-				float FinalValue = GetClampedAttributeValue(Data, Tag);
-				OnAttributeChanged.Broadcast(Tag, FinalValue);
-			}
-		);
-	}
+				const UF1AttributeSet* AS = CastChecked<UF1AttributeSet>(AttributeSet);
+				float SafeHealth = FMath::Clamp(Data.NewValue, 0.0f, AS->GetMaxHealth());
+				OnHealthChanged.Broadcast(SafeHealth);
+			});
+
+	// Max Health
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetMaxHealthAttribute())
+		.AddLambda([this](const FOnAttributeChangeData& Data)
+			{
+				OnMaxHealthChanged.Broadcast(Data.NewValue);
+			});
+
+	// Mana - 클램핑 처리
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetManaAttribute())
+		.AddLambda([this](const FOnAttributeChangeData& Data)
+			{
+				const UF1AttributeSet* AS = CastChecked<UF1AttributeSet>(AttributeSet);
+				float SafeMana = FMath::Clamp(Data.NewValue, 0.0f, AS->GetMaxMana());
+				OnManaChanged.Broadcast(SafeMana);
+			});
+
+	// Max Mana
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetMaxManaAttribute())
+		.AddLambda([this](const FOnAttributeChangeData& Data)
+			{
+				OnMaxManaChanged.Broadcast(Data.NewValue);
+			});
+
+	// Health Regeneration
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetHealthRegenerationAttribute())
+		.AddLambda([this](const FOnAttributeChangeData& Data)
+			{
+				OnHealthRegenerationChanged.Broadcast(Data.NewValue);
+			});
+
+	// Mana Regeneration
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetManaRegenerationAttribute())
+		.AddLambda([this](const FOnAttributeChangeData& Data)
+			{
+				OnManaRegenerationChanged.Broadcast(Data.NewValue);
+			});
+
+	// Attack Damage
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetAttackDamageAttribute())
+		.AddLambda([this](const FOnAttributeChangeData& Data)
+			{
+				OnAttackDamageChanged.Broadcast(Data.NewValue);
+			});
+
+	// Attack Speed
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetAttackSpeedAttribute())
+		.AddLambda([this](const FOnAttributeChangeData& Data)
+			{
+				OnAttackSpeedChanged.Broadcast(Data.NewValue);
+			});
+
+	// Ability Power
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetAbilityPowerAttribute())
+		.AddLambda([this](const FOnAttributeChangeData& Data)
+			{
+				OnAbilityPowerChanged.Broadcast(Data.NewValue);
+			});
+
+	// Critical Strike Chance
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetCriticalStrikeChanceAttribute())
+		.AddLambda([this](const FOnAttributeChangeData& Data)
+			{
+				OnCriticalStrikeChanceChanged.Broadcast(Data.NewValue);
+			});
+
+	// Critical Strike Damage
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetCriticalStrikeDamageAttribute())
+		.AddLambda([this](const FOnAttributeChangeData& Data)
+			{
+				OnCriticalStrikeDamageChanged.Broadcast(Data.NewValue);
+			});
+
+	// Armor
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetArmorAttribute())
+		.AddLambda([this](const FOnAttributeChangeData& Data)
+			{
+				OnArmorChanged.Broadcast(Data.NewValue);
+			});
+
+	// Magic Resistance
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetMagicResistanceAttribute())
+		.AddLambda([this](const FOnAttributeChangeData& Data)
+			{
+				OnMagicResistanceChanged.Broadcast(Data.NewValue);
+			});
+
+	// Movement Speed
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetMovementSpeedAttribute())
+		.AddLambda([this](const FOnAttributeChangeData& Data)
+			{
+				OnMovementSpeedChanged.Broadcast(Data.NewValue);
+			});
+
+	// Ability Haste
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetAbilityHasteAttribute())
+		.AddLambda([this](const FOnAttributeChangeData& Data)
+			{
+				OnAbilityHasteChanged.Broadcast(Data.NewValue);
+			});
+
+	// Armor Penetration
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetArmorPenetrationAttribute())
+		.AddLambda([this](const FOnAttributeChangeData& Data)
+			{
+				OnArmorPenetrationChanged.Broadcast(Data.NewValue);
+			});
+
+	// Magic Penetration
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetMagicPenetrationAttribute())
+		.AddLambda([this](const FOnAttributeChangeData& Data)
+			{
+				OnMagicPenetrationChanged.Broadcast(Data.NewValue);
+			});
+
+	// Life Steal
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetLifeStealAttribute())
+		.AddLambda([this](const FOnAttributeChangeData& Data)
+			{
+				OnLifeStealChanged.Broadcast(Data.NewValue);
+			});
+
+	// Omnivamp
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetOmnivampAttribute())
+		.AddLambda([this](const FOnAttributeChangeData& Data)
+			{
+				OnOmnivampChanged.Broadcast(Data.NewValue);
+			});
+
+	// Tenacity
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetTenacityAttribute())
+		.AddLambda([this](const FOnAttributeChangeData& Data)
+			{
+				OnTenacityChanged.Broadcast(Data.NewValue);
+			});
+
+	// Slow Resistance
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetSlowResistanceAttribute())
+		.AddLambda([this](const FOnAttributeChangeData& Data)
+			{
+				OnSlowResistanceChanged.Broadcast(Data.NewValue);
+			});
+
+	// Attack Range
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetAttackRangeAttribute())
+		.AddLambda([this](const FOnAttributeChangeData& Data)
+			{
+				OnAttackRangeChanged.Broadcast(Data.NewValue);
+			});
 
 	// EffectAssetTags 람다
 	Cast<UF1AbilitySystemComponent>(AbilitySystemComponent)->EffectAssetTags.AddLambda(
@@ -43,75 +211,4 @@ void UF1OverlayWidgetController::BindCallbacksToDependencies()
 			}
 		}
 	);
-}
-
-void UF1OverlayWidgetController::InitializeAttributeTagMap()
-{
-	const UF1AttributeSet* F1AttributeSet = CastChecked<UF1AttributeSet>(AttributeSet);
-	const FF1GameplayTags& GameplayTags = FF1GameplayTags::Get();
-
-	AttributeTagMap = {
-		// 생존 능력치
-		{F1AttributeSet->GetHealthAttribute(), GameplayTags.Attributes_Vital_Health},
-		{F1AttributeSet->GetMaxHealthAttribute(), GameplayTags.Attributes_Vital_MaxHealth},
-		{F1AttributeSet->GetHealthRegenerationAttribute(), GameplayTags.Attributes_Vital_HealthRegeneration},
-		{F1AttributeSet->GetManaAttribute(), GameplayTags.Attributes_Vital_Mana},
-		{F1AttributeSet->GetMaxManaAttribute(), GameplayTags.Attributes_Vital_MaxMana},
-		{F1AttributeSet->GetManaRegenerationAttribute(), GameplayTags.Attributes_Vital_ManaRegeneration},
-
-		// 공격 능력치
-		{F1AttributeSet->GetAttackDamageAttribute(), GameplayTags.Attributes_Offensive_AttackDamage},
-		{F1AttributeSet->GetAttackSpeedAttribute(), GameplayTags.Attributes_Offensive_AttackSpeed},
-		{F1AttributeSet->GetAbilityPowerAttribute(), GameplayTags.Attributes_Offensive_AbilityPower},
-		{F1AttributeSet->GetCriticalStrikeChanceAttribute(), GameplayTags.Attributes_Offensive_CriticalStrikeChance},
-		{F1AttributeSet->GetCriticalStrikeDamageAttribute(), GameplayTags.Attributes_Offensive_CriticalStrikeDamage},
-
-		// 방어 능력치
-		{F1AttributeSet->GetArmorAttribute(), GameplayTags.Attributes_Defensive_Armor},
-		{F1AttributeSet->GetMagicResistanceAttribute(), GameplayTags.Attributes_Defensive_MagicResistance},
-
-		// 이동 및 유틸리티
-		{F1AttributeSet->GetMovementSpeedAttribute(), GameplayTags.Attributes_Movement_Speed},
-		{F1AttributeSet->GetAbilityHasteAttribute(), GameplayTags.Attributes_Utility_AbilityHaste},
-
-		// 관통력
-		{F1AttributeSet->GetArmorPenetrationAttribute(), GameplayTags.Attributes_Penetration_Armor},
-		{F1AttributeSet->GetMagicPenetrationAttribute(), GameplayTags.Attributes_Penetration_Magic},
-
-		// 흡혈
-		{F1AttributeSet->GetLifeStealAttribute(), GameplayTags.Attributes_Sustain_LifeSteal},
-		{F1AttributeSet->GetOmnivampAttribute(), GameplayTags.Attributes_Sustain_Omnivamp},
-
-		// 저항력
-		{F1AttributeSet->GetTenacityAttribute(), GameplayTags.Attributes_Resistance_Tenacity},
-		{F1AttributeSet->GetSlowResistanceAttribute(), GameplayTags.Attributes_Resistance_SlowResistance},
-
-		// 사거리
-		{F1AttributeSet->GetAttackRangeAttribute(), GameplayTags.Attributes_Range_Attack}
-	};
-}
-
-float UF1OverlayWidgetController::GetClampedAttributeValue(const FOnAttributeChangeData& Data, const FGameplayTag& AttributeTag) const
-{
-	const UF1AttributeSet* F1AttributeSet = CastChecked<UF1AttributeSet>(AttributeSet);
-	const FF1GameplayTags& GameplayTags = FF1GameplayTags::Get();
-
-	if (AttributeTag.MatchesTagExact(GameplayTags.Attributes_Vital_Health))
-	{
-		return FMath::Clamp(Data.NewValue, 0.0f, F1AttributeSet->GetMaxHealth());
-	}
-	else if (AttributeTag.MatchesTagExact(GameplayTags.Attributes_Vital_Mana))
-	{
-		return FMath::Clamp(Data.NewValue, 0.0f, F1AttributeSet->GetMaxMana());
-	}
-	else if (AttributeTag.MatchesTagExact(GameplayTags.Attributes_Offensive_CriticalStrikeChance) ||
-		AttributeTag.MatchesTagExact(GameplayTags.Attributes_Sustain_LifeSteal) ||
-		AttributeTag.MatchesTagExact(GameplayTags.Attributes_Sustain_Omnivamp))
-	{
-		return FMath::Clamp(Data.NewValue, 0.0f, 100.0f);
-	}
-	else
-	{
-		return Data.NewValue;
-	}
 }

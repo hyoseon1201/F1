@@ -1,15 +1,17 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 #pragma once
+
 #include "CoreMinimal.h"
 #include "UI/WidgetController/F1WidgetController.h"
-#include "GameplayTagContainer.h"
-#include "AttributeSet.h"
 #include "F1OverlayWidgetController.generated.h"
 
 struct FOnAttributeChangeData;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnAttributeChangedSignature, const FGameplayTag&, AttributeTag, float, NewValue);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAttributeChangedSignature, float, NewValue);
 
+/**
+ *
+ */
 UCLASS(BlueprintType, Blueprintable)
 class F1_API UF1OverlayWidgetController : public UF1WidgetController
 {
@@ -20,13 +22,68 @@ public:
 	virtual void BindCallbacksToDependencies() override;
 
 	UPROPERTY(BlueprintAssignable, Category = "GAS|Attributes")
-	FOnAttributeChangedSignature OnAttributeChanged;
+	FOnAttributeChangedSignature OnHealthChanged;
 
-protected:
-	TMap<FGameplayAttribute, FGameplayTag> AttributeTagMap;
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Attributes")
+	FOnAttributeChangedSignature OnMaxHealthChanged;
 
-	void InitializeAttributeTagMap();
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Attributes")
+	FOnAttributeChangedSignature OnManaChanged;
 
-private:
-	float GetClampedAttributeValue(const FOnAttributeChangeData& Data, const FGameplayTag& AttributeTag) const;
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Attributes")
+	FOnAttributeChangedSignature OnMaxManaChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Attributes")
+	FOnAttributeChangedSignature OnHealthRegenerationChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Attributes")
+	FOnAttributeChangedSignature OnManaRegenerationChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Combat")
+	FOnAttributeChangedSignature OnAttackDamageChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Combat")
+	FOnAttributeChangedSignature OnAttackSpeedChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Combat")
+	FOnAttributeChangedSignature OnAbilityPowerChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Combat")
+	FOnAttributeChangedSignature OnCriticalStrikeChanceChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Combat")
+	FOnAttributeChangedSignature OnCriticalStrikeDamageChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Defense")
+	FOnAttributeChangedSignature OnArmorChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Defense")
+	FOnAttributeChangedSignature OnMagicResistanceChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Utility")
+	FOnAttributeChangedSignature OnMovementSpeedChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Utility")
+	FOnAttributeChangedSignature OnAbilityHasteChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Penetration")
+	FOnAttributeChangedSignature OnArmorPenetrationChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Penetration")
+	FOnAttributeChangedSignature OnMagicPenetrationChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Sustain")
+	FOnAttributeChangedSignature OnLifeStealChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Sustain")
+	FOnAttributeChangedSignature OnOmnivampChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Resistance")
+	FOnAttributeChangedSignature OnTenacityChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Resistance")
+	FOnAttributeChangedSignature OnSlowResistanceChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Range")
+	FOnAttributeChangedSignature OnAttackRangeChanged;
 };
