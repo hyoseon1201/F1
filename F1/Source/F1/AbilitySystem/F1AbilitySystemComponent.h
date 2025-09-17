@@ -6,6 +6,8 @@
 #include "AbilitySystemComponent.h"
 #include "F1AbilitySystemComponent.generated.h"
 
+DECLARE_MULTICAST_DELEGATE_OneParam(FEffectAssetTags, const FGameplayTagContainer& /*AssetTags*/);
+
 /**
  * 
  */
@@ -14,4 +16,12 @@ class F1_API UF1AbilitySystemComponent : public UAbilitySystemComponent
 {
 	GENERATED_BODY()
 	
+public:
+	FEffectAssetTags EffectAssetTags;
+
+	void AbilityActorInfoSet();
+
+protected:
+
+	void EffectApplied(UAbilitySystemComponent* AbilitySystemComponent, const FGameplayEffectSpec& EffectSpec, FActiveGameplayEffectHandle ActiveEffectHandle);
 };

@@ -32,6 +32,10 @@ void AF1CharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
     DOREPLIFETIME(AF1CharacterBase, TeamID);
 }
 
+void AF1CharacterBase::InitAbilityActorInfo()
+{
+}
+
 void AF1CharacterBase::HighlightActor()
 {
     if (bHighlighted) return;

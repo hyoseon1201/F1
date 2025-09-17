@@ -9,6 +9,7 @@
 #include "AbilitySystemComponent.h"
 #include "Game/F1PlayerController.h"
 #include "UI/HUD/F1HUD.h"
+#include "AbilitySystem/F1AbilitySystemComponent.h"
 
 AF1HeroCharacter::AF1HeroCharacter()
 {
@@ -45,6 +46,7 @@ void AF1HeroCharacter::InitAbilityActorInfo()
 	check(F1PlayerState);
 
 	F1PlayerState->GetAbilitySystemComponent()->InitAbilityActorInfo(F1PlayerState, this);
+	Cast<UF1AbilitySystemComponent>(F1PlayerState->GetAbilitySystemComponent())->AbilityActorInfoSet();
 	AbilitySystemComponent = F1PlayerState->GetAbilitySystemComponent();
 	AttributeSet = F1PlayerState->GetAttributeSet();
 
