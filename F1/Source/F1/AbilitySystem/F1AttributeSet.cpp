@@ -5,48 +5,13 @@
 #include "GameFramework/Character.h"
 #include "GameplayEffectExtension.h"
 #include "Net/UnrealNetwork.h"
+#include "GameFramework/Character.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "Character/F1HeroCharacter.h"
+#include "Game/F1PlayerState.h"
 
 UF1AttributeSet::UF1AttributeSet()
 {
-	// TEMP
-
-	// 기본 생존 능력치 초기화
-	InitHealth(50.f);
-	InitMaxHealth(100.f);
-	InitHealthRegeneration(1.0f);
-	InitMana(25.f);
-	InitMaxMana(50.f);
-	InitManaRegeneration(1.0f);
-
-	// 공격 능력치 초기화
-	InitAttackDamage(60.f);
-	InitAttackSpeed(0.625f);
-	InitAbilityPower(0.f);
-	InitCriticalStrikeChance(0.f);
-	InitCriticalStrikeDamage(200.f);
-
-	// 방어 능력치 초기화
-	InitArmor(30.f);
-	InitMagicResistance(30.f);
-
-	// 이동 및 유틸리티 초기화
-	InitMovementSpeed(325.f);
-	InitAbilityHaste(0.f);
-
-	// 관통력 초기화
-	InitArmorPenetration(0.f);
-	InitMagicPenetration(0.f);
-
-	// 흡혈 초기화
-	InitLifeSteal(0.f);
-	InitOmnivamp(0.f);
-
-	// 저항력 초기화
-	InitTenacity(0.f);
-	InitSlowResistance(0.f);
-
-	// 사거리 초기화
-	InitAttackRange(125.f);
 }
 
 void UF1AttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -77,8 +42,10 @@ void UF1AttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, AbilityHaste, COND_None, REPNOTIFY_Always);
 
 	// 관통력
-	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, ArmorPenetration, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, MagicPenetration, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, ArmorPenetrationFlat, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, ArmorPenetrationPercent, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, MagicPenetrationFlat, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, MagicPenetrationPercent, COND_None, REPNOTIFY_Always);
 
 	// 흡혈
 	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, LifeSteal, COND_None, REPNOTIFY_Always);
@@ -116,6 +83,37 @@ void UF1AttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 {
 	FEffectProperties Props;
 	SetEffectProperties(Data, Props);
+
+	if (Data.EvaluatedData.Attribute == GetMovementSpeedAttribute())
+	{
+		UE_LOG(LogTemp, Error, TEXT("=== PostGameplayEffectExecute MovementSpeed ==="));
+		UE_LOG(LogTemp, Warning, TEXT("  TargetAvatarActor: %s"),
+			Props.TargetAvatarActor ? *Props.TargetAvatarActor->GetName() : TEXT("null"));
+		UE_LOG(LogTemp, Warning, TEXT("  TargetAvatarActor Class: %s"),
+			Props.TargetAvatarActor ? *Props.TargetAvatarActor->GetClass()->GetName() : TEXT("null"));
+
+		// Data.Target으로도 확인
+		UE_LOG(LogTemp, Warning, TEXT("  Data.Target.AvatarActor: %s"),
+			Data.Target.AbilityActorInfo.IsValid() && Data.Target.AbilityActorInfo->AvatarActor.IsValid()
+			? *Data.Target.AbilityActorInfo->AvatarActor->GetName() : TEXT("null"));
+
+		if (ACharacter* Character = Cast<ACharacter>(Props.TargetAvatarActor))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("  Cast to ACharacter SUCCESS"));
+			if (UCharacterMovementComponent* MovementComp = Character->GetCharacterMovement())
+			{
+				float NewSpeed = GetMovementSpeed();
+				MovementComp->MaxWalkSpeed = NewSpeed;
+
+				FString RoleString = Character->HasAuthority() ? TEXT("Server") : TEXT("Client");
+				UE_LOG(LogTemp, Warning, TEXT("%s: PostGE Updated Movement Speed to: %f"), *RoleString, NewSpeed);
+			}
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("  Cast to ACharacter FAILED!"));
+		}
+	}
 
 	if (Data.EvaluatedData.Attribute == GetHealthAttribute())
 	{
@@ -206,14 +204,24 @@ void UF1AttributeSet::OnRep_AbilityHaste(const FGameplayAttributeData& OldAbilit
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UF1AttributeSet, AbilityHaste, OldAbilityHaste);
 }
 
-void UF1AttributeSet::OnRep_ArmorPenetration(const FGameplayAttributeData& OldArmorPenetration) const
+void UF1AttributeSet::OnRep_ArmorPenetrationFlat(const FGameplayAttributeData& OldArmorPenetrationFlat) const
 {
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UF1AttributeSet, ArmorPenetration, OldArmorPenetration);
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UF1AttributeSet, ArmorPenetrationFlat, OldArmorPenetrationFlat);
 }
 
-void UF1AttributeSet::OnRep_MagicPenetration(const FGameplayAttributeData& OldMagicPenetration) const
+void UF1AttributeSet::OnRep_ArmorPenetrationPercent(const FGameplayAttributeData& OldArmorPenetrationPercent) const
 {
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UF1AttributeSet, MagicPenetration, OldMagicPenetration);
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UF1AttributeSet, ArmorPenetrationPercent, OldArmorPenetrationPercent);
+}
+
+void UF1AttributeSet::OnRep_MagicPenetrationFlat(const FGameplayAttributeData& OldMagicPenetrationFlat) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UF1AttributeSet, MagicPenetrationFlat, OldMagicPenetrationFlat);
+}
+
+void UF1AttributeSet::OnRep_MagicPenetrationPercent(const FGameplayAttributeData& OldMagicPenetrationPercent) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UF1AttributeSet, MagicPenetrationPercent, OldMagicPenetrationPercent);
 }
 
 void UF1AttributeSet::OnRep_LifeSteal(const FGameplayAttributeData& OldLifeSteal) const

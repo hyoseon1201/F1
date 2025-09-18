@@ -10,7 +10,8 @@
 #include "Game/F1PlayerController.h"
 #include "UI/HUD/F1HUD.h"
 #include "AbilitySystem/F1AbilitySystemComponent.h"
-#include <AbilitySystem/F1AttributeSet.h>
+#include "AbilitySystem/F1AttributeSet.h"
+#include "Net/UnrealNetwork.h"
 
 AF1HeroCharacter::AF1HeroCharacter()
 {
@@ -25,6 +26,13 @@ AF1HeroCharacter::AF1HeroCharacter()
 
 	// TEMP
 	SetGenericTeamId(FGenericTeamId(1));
+}
+
+void AF1HeroCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+    DOREPLIFETIME_CONDITION_NOTIFY(AF1HeroCharacter, CurrentCharacterInfo, COND_None, REPNOTIFY_Always);
 }
 
 void AF1HeroCharacter::PossessedBy(AController* NewController)
@@ -66,32 +74,16 @@ void AF1HeroCharacter::SetCharacterClass(FName CharacterRowName)
 
     // 현재 캐릭터 정보 저장
     CurrentCharacterInfo = *ClassInfo;
-    UE_LOG(LogTemp, Warning, TEXT("Setting Character Class: %s"), *CurrentCharacterInfo.CharacterName);
 
-    // === 1. 메시 변경 ===
-    if (CurrentCharacterInfo.CharacterMesh)
-    {
-        GetMesh()->SetSkeletalMesh(CurrentCharacterInfo.CharacterMesh);
-        UE_LOG(LogTemp, Warning, TEXT("Set Character Mesh: %s"), *CurrentCharacterInfo.CharacterMesh->GetName());
-    }
-
-    // === 2. 애니메이션 블루프린트 변경 ===
-    if (CurrentCharacterInfo.AnimBlueprint)
-    {
-        GetMesh()->SetAnimInstanceClass(CurrentCharacterInfo.AnimBlueprint);
-        UE_LOG(LogTemp, Warning, TEXT("Set AnimBlueprint: %s"), *CurrentCharacterInfo.AnimBlueprint->GetName());
-    }
-
-    // === 3. Base 클래스의 Attributes 설정 ===
     DefaultAttributes = CurrentCharacterInfo.DefaultAttributes;
     GrowthAttributes = CurrentCharacterInfo.GrowthAttributes;
 
-    // === 4. 기본 속성 적용 ===
     if (DefaultAttributes)
     {
         InitializeDefaultAttributes();
-        UE_LOG(LogTemp, Warning, TEXT("Applied Default Attributes"));
     }
+
+    ApplyGrowthForCurrentLevel();
 
     UE_LOG(LogTemp, Warning, TEXT("Character Class '%s' set successfully!"), *CurrentCharacterInfo.CharacterName);
 }
@@ -114,6 +106,31 @@ float AF1HeroCharacter::GetCurrentExperience() const
     return 0.0f;
 }
 
+void AF1HeroCharacter::OnRep_CurrentCharacterInfo()
+{
+    FString RoleString = HasAuthority() ? TEXT("Server") : TEXT("Client");
+    UE_LOG(LogTemp, Warning, TEXT("%s: OnRep_CurrentCharacterInfo triggered"), *RoleString);
+
+    ApplyVisualsFromCurrentInfo();
+}
+
+void AF1HeroCharacter::ApplyVisualsFromCurrentInfo()
+{
+    if (CurrentCharacterInfo.CharacterMesh)
+    {
+        GetMesh()->SetSkeletalMesh(CurrentCharacterInfo.CharacterMesh);
+        FString RoleString = HasAuthority() ? TEXT("Server") : TEXT("Client");
+        UE_LOG(LogTemp, Warning, TEXT("%s: Applied Character Mesh: %s"), *RoleString, *CurrentCharacterInfo.CharacterMesh->GetName());
+    }
+
+    if (CurrentCharacterInfo.AnimBlueprint)
+    {
+        GetMesh()->SetAnimInstanceClass(CurrentCharacterInfo.AnimBlueprint);
+        FString RoleString = HasAuthority() ? TEXT("Server") : TEXT("Client");
+        UE_LOG(LogTemp, Warning, TEXT("%s: Applied AnimBlueprint: %s"), *RoleString, *CurrentCharacterInfo.AnimBlueprint->GetName());
+    }
+}
+
 void AF1HeroCharacter::ApplyLevelUpGrowth()
 {
     if (!HasAuthority()) return;
@@ -130,30 +147,79 @@ void AF1HeroCharacter::ApplyLevelUpGrowth()
     GetAbilitySystemComponent()->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
 }
 
+void AF1HeroCharacter::ApplyGrowthForCurrentLevel()
+{
+    if (!HasAuthority() || !GrowthAttributes) return;
+
+    int32 CurrentLevel = GetCurrentLevel();
+
+    if (CurrentLevel <= 1)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Level 1, no growth to apply"));
+        return;
+    }
+
+    // 레벨 2부터 현재 레벨까지 성장 적용
+    int32 GrowthLevels = CurrentLevel - 1;
+
+    for (int32 i = 0; i < GrowthLevels; i++)
+    {
+        const FGameplayEffectContextHandle ContextHandle = GetAbilitySystemComponent()->MakeEffectContext();
+        const FGameplayEffectSpecHandle SpecHandle = GetAbilitySystemComponent()->MakeOutgoingSpec(GrowthAttributes, 1.f, ContextHandle);
+        GetAbilitySystemComponent()->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+    }
+
+    UE_LOG(LogTemp, Warning, TEXT("Applied %d growth levels for current level: %d"), GrowthLevels, CurrentLevel);
+}
+
+void AF1HeroCharacter::SyncMovementSpeedWithAttributeSet()
+{
+    if (const UF1AttributeSet* AS = Cast<UF1AttributeSet>(AttributeSet))
+    {
+        if (GetCharacterMovement())
+        {
+            float CurrentSpeed = AS->GetMovementSpeed();
+            GetCharacterMovement()->MaxWalkSpeed = CurrentSpeed;;
+        }
+    }
+}
+
+
 void AF1HeroCharacter::InitAbilityActorInfo()
 {
-	AF1PlayerState* F1PlayerState = GetPlayerState<AF1PlayerState>();
-	check(F1PlayerState);
+    AF1PlayerState* F1PlayerState = GetPlayerState<AF1PlayerState>();
+    check(F1PlayerState);
 
-	F1PlayerState->GetAbilitySystemComponent()->InitAbilityActorInfo(F1PlayerState, this);
-	Cast<UF1AbilitySystemComponent>(F1PlayerState->GetAbilitySystemComponent())->AbilityActorInfoSet();
-	AbilitySystemComponent = F1PlayerState->GetAbilitySystemComponent();
-	AttributeSet = F1PlayerState->GetAttributeSet();
+    FString RoleString = HasAuthority() ? TEXT("Server") : TEXT("Client");
 
-	if (IsLocallyControlled())
-	{
-		if (AF1PlayerController* F1PlayerController = Cast<AF1PlayerController>(GetController()))
-		{
-			if (AF1HUD* F1HUD = Cast<AF1HUD>(F1PlayerController->GetHUD()))
-			{
-				F1HUD->InitOverlay(F1PlayerController, F1PlayerState, AbilitySystemComponent, AttributeSet);
-			}
-		}
-	}
+    // InitAbilityActorInfo 호출 전 상태
+    UAbilitySystemComponent* ASC = F1PlayerState->GetAbilitySystemComponent();
 
-	if (HasAuthority())
-	{
-		// TEMP
-		SetCharacterClass(FName("Crunch"));
-	}
+    // InitAbilityActorInfo 호출
+    F1PlayerState->GetAbilitySystemComponent()->InitAbilityActorInfo(F1PlayerState, this);
+    Cast<UF1AbilitySystemComponent>(F1PlayerState->GetAbilitySystemComponent())->AbilityActorInfoSet();
+
+    AbilitySystemComponent = F1PlayerState->GetAbilitySystemComponent();
+    AttributeSet = F1PlayerState->GetAttributeSet();
+
+    if (IsLocallyControlled())
+    {
+        if (AF1PlayerController* F1PlayerController = Cast<AF1PlayerController>(GetController()))
+        {
+            if (AF1HUD* F1HUD = Cast<AF1HUD>(F1PlayerController->GetHUD()))
+            {
+                F1HUD->InitOverlay(F1PlayerController, F1PlayerState, AbilitySystemComponent, AttributeSet);
+            }
+        }
+    }
+
+    if (HasAuthority())
+    {
+        SetCharacterClass(FName("Crunch"));
+    }
+
+    if (!HasAuthority())
+    {
+        SyncMovementSpeedWithAttributeSet();
+    }
 }

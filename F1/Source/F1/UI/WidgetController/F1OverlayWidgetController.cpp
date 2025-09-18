@@ -26,8 +26,10 @@ void UF1OverlayWidgetController::BroadcastInitialValues()
 	OnMovementSpeedChanged.Broadcast(F1AttributeSet->GetMovementSpeed());
 	OnAbilityHasteChanged.Broadcast(F1AttributeSet->GetAbilityHaste());
 
-	OnArmorPenetrationChanged.Broadcast(F1AttributeSet->GetArmorPenetration());
-	OnMagicPenetrationChanged.Broadcast(F1AttributeSet->GetMagicPenetration());
+	OnArmorPenetrationFlatChanged.Broadcast(F1AttributeSet->GetArmorPenetrationFlat());
+	OnArmorPenetrationPercentChanged.Broadcast(F1AttributeSet->GetArmorPenetrationPercent());
+	OnMagicPenetrationFlatChanged.Broadcast(F1AttributeSet->GetMagicPenetrationFlat());
+	OnMagicPenetrationPercentChanged.Broadcast(F1AttributeSet->GetMagicPenetrationPercent());
 
 	OnLifeStealChanged.Broadcast(F1AttributeSet->GetLifeSteal());
 	OnOmnivampChanged.Broadcast(F1AttributeSet->GetOmnivamp());
@@ -151,18 +153,32 @@ void UF1OverlayWidgetController::BindCallbacksToDependencies()
 				OnAbilityHasteChanged.Broadcast(Data.NewValue);
 			});
 
-	// Armor Penetration
-	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetArmorPenetrationAttribute())
+	// Armor Penetration Flat
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetArmorPenetrationFlatAttribute())
 		.AddLambda([this](const FOnAttributeChangeData& Data)
 			{
-				OnArmorPenetrationChanged.Broadcast(Data.NewValue);
+				OnArmorPenetrationFlatChanged.Broadcast(Data.NewValue);
 			});
 
-	// Magic Penetration
-	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetMagicPenetrationAttribute())
+	// Armor Penetration Percent
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetArmorPenetrationPercentAttribute())
 		.AddLambda([this](const FOnAttributeChangeData& Data)
 			{
-				OnMagicPenetrationChanged.Broadcast(Data.NewValue);
+				OnArmorPenetrationPercentChanged.Broadcast(Data.NewValue);
+			});
+
+	// Magic Penetration Flat
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetMagicPenetrationFlatAttribute())
+		.AddLambda([this](const FOnAttributeChangeData& Data)
+			{
+				OnMagicPenetrationFlatChanged.Broadcast(Data.NewValue);
+			});
+
+	// Magic Penetration Percent
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetMagicPenetrationPercentAttribute())
+		.AddLambda([this](const FOnAttributeChangeData& Data)
+			{
+				OnMagicPenetrationPercentChanged.Broadcast(Data.NewValue);
 			});
 
 	// Life Steal
@@ -207,7 +223,7 @@ void UF1OverlayWidgetController::BindCallbacksToDependencies()
 			for (const FGameplayTag& Tag : AssetTags)
 			{
 				const FString Msg = FString::Printf(TEXT("GE Tag: %s"), *Tag.ToString());
-				GEngine->AddOnScreenDebugMessage(-1, 8.f, FColor::Blue, Msg);
+				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, Msg);
 			}
 		}
 	);

@@ -67,10 +67,17 @@ public:
 	FOnAttributeChangedSignature OnAbilityHasteChanged;
 
 	UPROPERTY(BlueprintAssignable, Category = "GAS|Penetration")
-	FOnAttributeChangedSignature OnArmorPenetrationChanged;
+	FOnAttributeChangedSignature OnArmorPenetrationFlatChanged;
+
 
 	UPROPERTY(BlueprintAssignable, Category = "GAS|Penetration")
-	FOnAttributeChangedSignature OnMagicPenetrationChanged;
+	FOnAttributeChangedSignature OnArmorPenetrationPercentChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Penetration")
+	FOnAttributeChangedSignature OnMagicPenetrationFlatChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Penetration")
+	FOnAttributeChangedSignature OnMagicPenetrationPercentChanged;
 
 	UPROPERTY(BlueprintAssignable, Category = "GAS|Sustain")
 	FOnAttributeChangedSignature OnLifeStealChanged;

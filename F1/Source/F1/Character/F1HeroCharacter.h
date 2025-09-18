@@ -17,6 +17,8 @@ class F1_API AF1HeroCharacter : public AF1CharacterBase
 public:
 	AF1HeroCharacter();
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void OnRep_PlayerState() override;
 
@@ -36,14 +38,19 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Data")
 	UDataTable* CharacterClassDataTable = nullptr;
 
-	UPROPERTY(BlueprintReadOnly, Category = "Character")
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_CurrentCharacterInfo, Category = "Character")
 	FCharacterClassInfo CurrentCharacterInfo;
 
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Attributes")
 	TSubclassOf<UGameplayEffect> GrowthAttributes;
 
-	void ApplyLevelUpGrowth();
+	UFUNCTION()
+	void OnRep_CurrentCharacterInfo();
 
+	void ApplyVisualsFromCurrentInfo();
+	void ApplyLevelUpGrowth();
+	void ApplyGrowthForCurrentLevel();
+	void SyncMovementSpeedWithAttributeSet();
 private:
 	virtual void InitAbilityActorInfo() override;
 };

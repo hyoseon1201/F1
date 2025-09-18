@@ -130,13 +130,21 @@ public:
 	// ===========================================
 	// °üÅë·Â (Penetration)
 	// ===========================================
-	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_ArmorPenetration, Category = "Penetration Attributes")
-	FGameplayAttributeData ArmorPenetration;
-	ATTRIBUTE_ACCESSORS(UF1AttributeSet, ArmorPenetration);
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_ArmorPenetrationFlat, Category = "Penetration Attributes")
+	FGameplayAttributeData ArmorPenetrationFlat;
+	ATTRIBUTE_ACCESSORS(UF1AttributeSet, ArmorPenetrationFlat);
 
-	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_MagicPenetration, Category = "Penetration Attributes")
-	FGameplayAttributeData MagicPenetration;
-	ATTRIBUTE_ACCESSORS(UF1AttributeSet, MagicPenetration);
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_ArmorPenetrationPercent, Category = "Penetration Attributes")
+	FGameplayAttributeData ArmorPenetrationPercent;
+	ATTRIBUTE_ACCESSORS(UF1AttributeSet, ArmorPenetrationPercent);
+
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_MagicPenetrationFlat, Category = "Penetration Attributes")
+	FGameplayAttributeData MagicPenetrationFlat;
+	ATTRIBUTE_ACCESSORS(UF1AttributeSet, MagicPenetrationFlat);
+
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_MagicPenetrationPercent, Category = "Penetration Attributes")
+	FGameplayAttributeData MagicPenetrationPercent;
+	ATTRIBUTE_ACCESSORS(UF1AttributeSet, MagicPenetrationPercent);
 
 	// ===========================================
 	// ÈíÇ÷ (Life Steal & Spell Vamp)
@@ -240,10 +248,16 @@ public:
 	void OnRep_AbilityHaste(const FGameplayAttributeData& OldAbilityHaste) const;
 
 	UFUNCTION()
-	void OnRep_ArmorPenetration(const FGameplayAttributeData& OldArmorPenetration) const;
+	void OnRep_ArmorPenetrationFlat(const FGameplayAttributeData& OldArmorPenetrationFlat) const;
 
 	UFUNCTION()
-	void OnRep_MagicPenetration(const FGameplayAttributeData& OldMagicPenetration) const;
+	void OnRep_ArmorPenetrationPercent(const FGameplayAttributeData& OldArmorPenetrationPercent) const;
+
+	UFUNCTION()
+	void OnRep_MagicPenetrationFlat(const FGameplayAttributeData& OldMagicPenetrationFlat) const;
+
+	UFUNCTION()
+	void OnRep_MagicPenetrationPercent(const FGameplayAttributeData& OldMagicPenetrationPercent) const;
 
 	UFUNCTION()
 	void OnRep_LifeSteal(const FGameplayAttributeData& OldLifeSteal) const;
