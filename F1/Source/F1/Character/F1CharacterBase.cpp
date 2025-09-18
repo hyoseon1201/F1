@@ -88,8 +88,10 @@ UAbilitySystemComponent* AF1CharacterBase::GetAbilitySystemComponent() const
 
 void AF1CharacterBase::InitializeDefaultAttributes()
 {
+    if (!HasAuthority()) return;
     check(IsValid(GetAbilitySystemComponent()));
     check(DefaultAttributes);
+
     const FGameplayEffectContextHandle ContextHandle = GetAbilitySystemComponent()->MakeEffectContext();
     const FGameplayEffectSpecHandle SpecHandle = GetAbilitySystemComponent()->MakeOutgoingSpec(DefaultAttributes, 1.f, ContextHandle);
     GetAbilitySystemComponent()->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());

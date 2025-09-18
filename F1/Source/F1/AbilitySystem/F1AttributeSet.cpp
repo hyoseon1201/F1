@@ -90,6 +90,12 @@ void UF1AttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 
 	// 사거리
 	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, AttackRange, COND_None, REPNOTIFY_Always);
+
+	// 캐릭터 정보 추가
+	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, CharacterLevel, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, Experience, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, MaxExperience, COND_None, REPNOTIFY_Always);
+
 }
 
 void UF1AttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
@@ -233,6 +239,21 @@ void UF1AttributeSet::OnRep_SlowResistance(const FGameplayAttributeData& OldSlow
 void UF1AttributeSet::OnRep_AttackRange(const FGameplayAttributeData& OldAttackRange) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UF1AttributeSet, AttackRange, OldAttackRange);
+}
+
+void UF1AttributeSet::OnRep_CharacterLevel(const FGameplayAttributeData& OldCharacterLevel) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UF1AttributeSet, CharacterLevel, OldCharacterLevel);
+}
+
+void UF1AttributeSet::OnRep_Experience(const FGameplayAttributeData& OldExperience) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UF1AttributeSet, Experience, OldExperience);
+}
+
+void UF1AttributeSet::OnRep_MaxExperience(const FGameplayAttributeData& OldMaxExperience) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UF1AttributeSet, MaxExperience, OldMaxExperience);
 }
 
 void UF1AttributeSet::SetEffectProperties(const FGameplayEffectModCallbackData& Data, FEffectProperties& Props) const

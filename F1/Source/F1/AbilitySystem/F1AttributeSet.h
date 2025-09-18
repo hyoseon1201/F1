@@ -167,6 +167,21 @@ public:
 	FGameplayAttributeData AttackRange;
 	ATTRIBUTE_ACCESSORS(UF1AttributeSet, AttackRange);
 
+	// ===========================================
+	// 캐릭터 정보 (Character Info)
+	// ===========================================
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_CharacterLevel, Category = "Character Info")
+	FGameplayAttributeData CharacterLevel;
+	ATTRIBUTE_ACCESSORS(UF1AttributeSet, CharacterLevel);
+
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_Experience, Category = "Character Info")
+	FGameplayAttributeData Experience;
+	ATTRIBUTE_ACCESSORS(UF1AttributeSet, Experience);
+
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_MaxExperience, Category = "Character Info")
+	FGameplayAttributeData MaxExperience;
+	ATTRIBUTE_ACCESSORS(UF1AttributeSet, MaxExperience);
+
 public:
 
 	UF1AttributeSet();
@@ -244,6 +259,15 @@ public:
 
 	UFUNCTION()
 	void OnRep_AttackRange(const FGameplayAttributeData& OldAttackRange) const;
+
+	UFUNCTION()
+	void OnRep_CharacterLevel(const FGameplayAttributeData& OldCharacterLevel) const;
+
+	UFUNCTION()
+	void OnRep_Experience(const FGameplayAttributeData& OldExperience) const;
+
+	UFUNCTION()
+	void OnRep_MaxExperience(const FGameplayAttributeData& OldMaxExperience) const;
 
 private:
 	void SetEffectProperties(const FGameplayEffectModCallbackData& Data, FEffectProperties& Props) const;
