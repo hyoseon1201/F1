@@ -69,7 +69,6 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "GAS|Penetration")
 	FOnAttributeChangedSignature OnArmorPenetrationFlatChanged;
 
-
 	UPROPERTY(BlueprintAssignable, Category = "GAS|Penetration")
 	FOnAttributeChangedSignature OnArmorPenetrationPercentChanged;
 

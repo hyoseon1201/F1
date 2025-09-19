@@ -86,32 +86,13 @@ void UF1AttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 
 	if (Data.EvaluatedData.Attribute == GetMovementSpeedAttribute())
 	{
-		UE_LOG(LogTemp, Error, TEXT("=== PostGameplayEffectExecute MovementSpeed ==="));
-		UE_LOG(LogTemp, Warning, TEXT("  TargetAvatarActor: %s"),
-			Props.TargetAvatarActor ? *Props.TargetAvatarActor->GetName() : TEXT("null"));
-		UE_LOG(LogTemp, Warning, TEXT("  TargetAvatarActor Class: %s"),
-			Props.TargetAvatarActor ? *Props.TargetAvatarActor->GetClass()->GetName() : TEXT("null"));
-
-		// Data.Target으로도 확인
-		UE_LOG(LogTemp, Warning, TEXT("  Data.Target.AvatarActor: %s"),
-			Data.Target.AbilityActorInfo.IsValid() && Data.Target.AbilityActorInfo->AvatarActor.IsValid()
-			? *Data.Target.AbilityActorInfo->AvatarActor->GetName() : TEXT("null"));
-
 		if (ACharacter* Character = Cast<ACharacter>(Props.TargetAvatarActor))
 		{
-			UE_LOG(LogTemp, Warning, TEXT("  Cast to ACharacter SUCCESS"));
 			if (UCharacterMovementComponent* MovementComp = Character->GetCharacterMovement())
 			{
 				float NewSpeed = GetMovementSpeed();
 				MovementComp->MaxWalkSpeed = NewSpeed;
-
-				FString RoleString = Character->HasAuthority() ? TEXT("Server") : TEXT("Client");
-				UE_LOG(LogTemp, Warning, TEXT("%s: PostGE Updated Movement Speed to: %f"), *RoleString, NewSpeed);
 			}
-		}
-		else
-		{
-			UE_LOG(LogTemp, Error, TEXT("  Cast to ACharacter FAILED!"));
 		}
 	}
 

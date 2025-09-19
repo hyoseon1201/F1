@@ -57,6 +57,7 @@ void UF1OverlayWidgetController::BindCallbacksToDependencies()
 	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetMaxHealthAttribute())
 		.AddLambda([this](const FOnAttributeChangeData& Data)
 			{
+				UE_LOG(LogTemp, Warning, TEXT("MaxHealth"));
 				OnMaxHealthChanged.Broadcast(Data.NewValue);
 			});
 
@@ -94,6 +95,7 @@ void UF1OverlayWidgetController::BindCallbacksToDependencies()
 	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetAttackDamageAttribute())
 		.AddLambda([this](const FOnAttributeChangeData& Data)
 			{
+				UE_LOG(LogTemp, Warning, TEXT("AttackDamage"));
 				OnAttackDamageChanged.Broadcast(Data.NewValue);
 			});
 
