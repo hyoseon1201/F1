@@ -192,6 +192,16 @@ void FF1GameplayTags::InitializeNativeGameplayTags()
         FString("Ultimate ability")
     );
 
+    GameplayTags.Ability_D = Manager.AddNativeGameplayTag(
+        FName("Ability.D"),
+        FString("Summoner Spell ability")
+    );
+
+    GameplayTags.Ability_F = Manager.AddNativeGameplayTag(
+        FName("Ability.F"),
+        FString("Summoner Spell ability")
+    );
+
     GameplayTags.Ability_BasicAttack = Manager.AddNativeGameplayTag(
         FName("Ability.BasicAttack"),
         FString("Basic attack ability")
@@ -220,9 +230,59 @@ void FF1GameplayTags::InitializeNativeGameplayTags()
         FString("R key input")
     );
 
+    GameplayTags.InputTag_D = Manager.AddNativeGameplayTag(
+        FName("InputTag.D"),
+        FString("D key input")
+    );
+
+    GameplayTags.InputTag_F = Manager.AddNativeGameplayTag(
+        FName("InputTag.F"),
+        FString("F key input")
+    );
+
     GameplayTags.InputTag_BasicAttack = Manager.AddNativeGameplayTag(
         FName("InputTag.BasicAttack"),
         FString("Basic attack input")
+    );
+
+    GameplayTags.InputTag_LMB = UGameplayTagsManager::Get().AddNativeGameplayTag(
+        FName("InputTag.LMB"),
+        FString("Input Tag for Left Mouse Button")
+    );
+
+    GameplayTags.InputTag_RMB = UGameplayTagsManager::Get().AddNativeGameplayTag(
+        FName("InputTag.RMB"),
+        FString("Input Tag for Right Mouse Button")
+    );
+
+    GameplayTags.InputTag_1 = UGameplayTagsManager::Get().AddNativeGameplayTag(
+        FName("InputTag.1"),
+        FString("Input Tag for 1 key")
+    );
+
+    GameplayTags.InputTag_2 = UGameplayTagsManager::Get().AddNativeGameplayTag(
+        FName("InputTag.2"),
+        FString("Input Tag for 2 key")
+    );
+
+    GameplayTags.InputTag_3 = UGameplayTagsManager::Get().AddNativeGameplayTag(
+        FName("InputTag.3"),
+        FString("Input Tag for 3 key")
+    );
+
+    GameplayTags.InputTag_4 = UGameplayTagsManager::Get().AddNativeGameplayTag(
+        FName("InputTag.4"),
+        FString("Input Tag for 4 key")
+    );
+
+    GameplayTags.InputTag_5 = UGameplayTagsManager::Get().AddNativeGameplayTag(
+        FName("InputTag.5"),
+        FString("Input Tag for 5 key")
+    );
+
+    GameplayTags.InputTag_6 = UGameplayTagsManager::Get().AddNativeGameplayTag(
+        FName("InputTag.6"),
+        FString("Input Tag for 6 key")
     );
 
     // ===========================================

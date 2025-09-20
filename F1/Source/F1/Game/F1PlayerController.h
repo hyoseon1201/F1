@@ -46,4 +46,7 @@ private:
 
 	UPROPERTY()
 	AF1CharacterBase* ThisActor;
+
+	float CursorTraceInterval = 0.1f;
+	float LastCursorTraceTime = 0.0f;
 };

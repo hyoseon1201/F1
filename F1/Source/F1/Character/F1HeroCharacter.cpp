@@ -40,6 +40,7 @@ void AF1HeroCharacter::PossessedBy(AController* NewController)
 	Super::PossessedBy(NewController);
 
 	InitAbilityActorInfo();
+    AddCharacterAbilities();
 }
 
 void AF1HeroCharacter::OnRep_PlayerState()
@@ -63,7 +64,6 @@ void AF1HeroCharacter::SetCharacterClass(FName CharacterRowName)
         return;
     }
 
-    // DataTable에서 캐릭터 정보 가져오기
     FCharacterClassInfo* ClassInfo = CharacterClassDataTable->FindRow<FCharacterClassInfo>(CharacterRowName, TEXT("SetCharacterClass"));
 
     if (!ClassInfo)
@@ -72,9 +72,7 @@ void AF1HeroCharacter::SetCharacterClass(FName CharacterRowName)
         return;
     }
 
-    // 현재 캐릭터 정보 저장
     CurrentCharacterInfo = *ClassInfo;
-
     DefaultAttributes = CurrentCharacterInfo.DefaultAttributes;
     GrowthAttributes = CurrentCharacterInfo.GrowthAttributes;
 
@@ -85,6 +83,8 @@ void AF1HeroCharacter::SetCharacterClass(FName CharacterRowName)
 
     ApplyGrowthForCurrentLevel();
 
+    ApplyVisualsFromCurrentInfo();
+    
     UE_LOG(LogTemp, Warning, TEXT("Character Class '%s' set successfully!"), *CurrentCharacterInfo.CharacterName);
 }
 
@@ -108,9 +108,6 @@ float AF1HeroCharacter::GetCurrentExperience() const
 
 void AF1HeroCharacter::OnRep_CurrentCharacterInfo()
 {
-    FString RoleString = HasAuthority() ? TEXT("Server") : TEXT("Client");
-    UE_LOG(LogTemp, Warning, TEXT("%s: OnRep_CurrentCharacterInfo triggered"), *RoleString);
-
     ApplyVisualsFromCurrentInfo();
 }
 
@@ -119,15 +116,11 @@ void AF1HeroCharacter::ApplyVisualsFromCurrentInfo()
     if (CurrentCharacterInfo.CharacterMesh)
     {
         GetMesh()->SetSkeletalMesh(CurrentCharacterInfo.CharacterMesh);
-        FString RoleString = HasAuthority() ? TEXT("Server") : TEXT("Client");
-        UE_LOG(LogTemp, Warning, TEXT("%s: Applied Character Mesh: %s"), *RoleString, *CurrentCharacterInfo.CharacterMesh->GetName());
     }
 
     if (CurrentCharacterInfo.AnimBlueprint)
     {
         GetMesh()->SetAnimInstanceClass(CurrentCharacterInfo.AnimBlueprint);
-        FString RoleString = HasAuthority() ? TEXT("Server") : TEXT("Client");
-        UE_LOG(LogTemp, Warning, TEXT("%s: Applied AnimBlueprint: %s"), *RoleString, *CurrentCharacterInfo.AnimBlueprint->GetName());
     }
 }
 
@@ -153,23 +146,11 @@ void AF1HeroCharacter::ApplyGrowthForCurrentLevel()
 
     int32 CurrentLevel = GetCurrentLevel();
 
-    if (CurrentLevel <= 1)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("Level 1, no growth to apply"));
-        return;
-    }
+    if (CurrentLevel <= 1) return;
 
-    // 레벨 2부터 현재 레벨까지 성장 적용
-    int32 GrowthLevels = CurrentLevel - 1;
-
-    for (int32 i = 0; i < GrowthLevels; i++)
-    {
-        const FGameplayEffectContextHandle ContextHandle = GetAbilitySystemComponent()->MakeEffectContext();
-        const FGameplayEffectSpecHandle SpecHandle = GetAbilitySystemComponent()->MakeOutgoingSpec(GrowthAttributes, 1.f, ContextHandle);
-        GetAbilitySystemComponent()->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
-    }
-
-    UE_LOG(LogTemp, Warning, TEXT("Applied %d growth levels for current level: %d"), GrowthLevels, CurrentLevel);
+    const FGameplayEffectContextHandle ContextHandle = GetAbilitySystemComponent()->MakeEffectContext();
+    const FGameplayEffectSpecHandle SpecHandle = GetAbilitySystemComponent()->MakeOutgoingSpec(GrowthAttributes, CurrentLevel - 1, ContextHandle);
+    GetAbilitySystemComponent()->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
 }
 
 void AF1HeroCharacter::SyncMovementSpeedWithAttributeSet()
@@ -188,14 +169,15 @@ void AF1HeroCharacter::SyncMovementSpeedWithAttributeSet()
 void AF1HeroCharacter::InitAbilityActorInfo()
 {
     AF1PlayerState* F1PlayerState = GetPlayerState<AF1PlayerState>();
-    check(F1PlayerState);
 
-    FString RoleString = HasAuthority() ? TEXT("Server") : TEXT("Client");
+    if (!F1PlayerState)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("PlayerState not valid in InitAbilityActorInfo"));
+        return;
+    }
 
-    // InitAbilityActorInfo 호출 전 상태
     UAbilitySystemComponent* ASC = F1PlayerState->GetAbilitySystemComponent();
 
-    // InitAbilityActorInfo 호출
     F1PlayerState->GetAbilitySystemComponent()->InitAbilityActorInfo(F1PlayerState, this);
     Cast<UF1AbilitySystemComponent>(F1PlayerState->GetAbilitySystemComponent())->AbilityActorInfoSet();
 
@@ -217,8 +199,7 @@ void AF1HeroCharacter::InitAbilityActorInfo()
     {
         SetCharacterClass(FName("Crunch"));
     }
-
-    if (!HasAuthority())
+    else
     {
         SyncMovementSpeedWithAttributeSet();
     }

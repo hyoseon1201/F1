@@ -178,6 +178,20 @@ void UF1AttributeSet::OnRep_MagicResistance(const FGameplayAttributeData& OldMag
 void UF1AttributeSet::OnRep_MovementSpeed(const FGameplayAttributeData& OldMovementSpeed) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UF1AttributeSet, MovementSpeed, OldMovementSpeed);
+
+	if (UAbilitySystemComponent* ASC = GetOwningAbilitySystemComponent())
+	{
+		if (ASC->AbilityActorInfo.IsValid() && ASC->AbilityActorInfo->AvatarActor.IsValid())
+		{
+			if (ACharacter* Character = Cast<ACharacter>(ASC->AbilityActorInfo->AvatarActor.Get()))
+			{
+				if (UCharacterMovementComponent* MovementComp = Character->GetCharacterMovement())
+				{
+					MovementComp->MaxWalkSpeed = GetMovementSpeed();
+				}
+			}
+		}
+	}
 }
 
 void UF1AttributeSet::OnRep_AbilityHaste(const FGameplayAttributeData& OldAbilityHaste) const

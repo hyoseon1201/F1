@@ -78,6 +78,8 @@ public:
     FGameplayTag Ability_W;
     FGameplayTag Ability_E;
     FGameplayTag Ability_R;
+    FGameplayTag Ability_D;
+    FGameplayTag Ability_F;
     FGameplayTag Ability_BasicAttack;
 
     // ===========================================
@@ -87,7 +89,17 @@ public:
     FGameplayTag InputTag_W;
     FGameplayTag InputTag_E;
     FGameplayTag InputTag_R;
+    FGameplayTag InputTag_D;
+    FGameplayTag InputTag_F;
     FGameplayTag InputTag_BasicAttack;
+    FGameplayTag InputTag_LMB;
+    FGameplayTag InputTag_RMB;
+    FGameplayTag InputTag_1;
+    FGameplayTag InputTag_2;
+    FGameplayTag InputTag_3;
+    FGameplayTag InputTag_4;
+    FGameplayTag InputTag_5;
+    FGameplayTag InputTag_6;
 
     // ===========================================
     // Damage Type Tags

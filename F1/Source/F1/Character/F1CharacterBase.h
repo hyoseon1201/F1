@@ -9,6 +9,7 @@
 class UAbilitySystemComponent;
 class UAttributeSet;
 class UGameplayEffect;
+class UGameplayAbility;
 
 UCLASS()
 class F1_API AF1CharacterBase : public ACharacter,
@@ -68,4 +69,9 @@ protected:
     TSubclassOf<UGameplayEffect> DefaultAttributes;
 
     void InitializeDefaultAttributes();
+    void AddCharacterAbilities();
+
+private:
+    UPROPERTY(EditAnywhere, Category = "Abilities")
+    TArray<TSubclassOf<UGameplayAbility>> StartupAbilities;
 };

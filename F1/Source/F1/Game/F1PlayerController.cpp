@@ -16,7 +16,11 @@ void AF1PlayerController::PlayerTick(float DeltaTime)
 {
 	Super::PlayerTick(DeltaTime);
 
-	CursorTrace();
+    if (GetWorld()->GetTimeSeconds() - LastCursorTraceTime >= CursorTraceInterval)
+    {
+        CursorTrace();
+        LastCursorTraceTime = GetWorld()->GetTimeSeconds();
+    }
 }
 
 void AF1PlayerController::BeginPlay()
@@ -110,5 +114,3 @@ void AF1PlayerController::CursorTrace()
         }
     }
 }
-
-

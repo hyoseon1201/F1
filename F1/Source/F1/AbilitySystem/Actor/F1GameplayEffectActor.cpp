@@ -79,17 +79,12 @@ void AF1GameplayEffectActor::RemoveInfiniteEffects(AActor* TargetActor)
 	UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor);
 	if (!IsValid(TargetASC)) return;
 
-	TArray<FActiveGameplayEffectHandle> HandlesToRemove;
-	for (TTuple<FActiveGameplayEffectHandle, UAbilitySystemComponent*> HandlePair : ActiveEffectHandles)
+	for (auto It = ActiveEffectHandles.CreateIterator(); It; ++It)
 	{
-		if (TargetASC == HandlePair.Value)
+		if (It->Value == TargetASC)
 		{
-			TargetASC->RemoveActiveGameplayEffect(HandlePair.Key, 1);
-			HandlesToRemove.Add(HandlePair.Key);
+			TargetASC->RemoveActiveGameplayEffect(It->Key, 1);
+			It.RemoveCurrent();
 		}
-	}
-	for (FActiveGameplayEffectHandle& Handle : HandlesToRemove)
-	{
-		ActiveEffectHandles.FindAndRemoveChecked(Handle);
 	}
 }

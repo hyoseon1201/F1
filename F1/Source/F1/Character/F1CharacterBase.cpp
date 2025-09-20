@@ -4,6 +4,7 @@
 #include "GameFramework/PlayerController.h"
 #include "Net/UnrealNetwork.h"
 #include "AbilitySystemComponent.h"
+#include "AbilitySystem/F1AbilitySystemComponent.h"
 
 AF1CharacterBase::AF1CharacterBase()
 {
@@ -95,4 +96,12 @@ void AF1CharacterBase::InitializeDefaultAttributes()
     const FGameplayEffectContextHandle ContextHandle = GetAbilitySystemComponent()->MakeEffectContext();
     const FGameplayEffectSpecHandle SpecHandle = GetAbilitySystemComponent()->MakeOutgoingSpec(DefaultAttributes, 1.f, ContextHandle);
     GetAbilitySystemComponent()->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+}
+
+void AF1CharacterBase::AddCharacterAbilities()
+{
+    UF1AbilitySystemComponent* F1ASC = CastChecked<UF1AbilitySystemComponent>(AbilitySystemComponent);
+    if (!HasAuthority()) return;
+
+    F1ASC->AddCharacterAbilities(StartupAbilities);
 }
