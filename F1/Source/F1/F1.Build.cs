@@ -31,8 +31,9 @@ public class F1 : ModuleRules
             "UMG",
             "Slate",
             "SlateCore",
-            "AIModule"
-		});
+            "AIModule",
+            "NavigationSystem"
+        });
 
         PrivateDependencyModuleNames.AddRange(new string[] {  });
 

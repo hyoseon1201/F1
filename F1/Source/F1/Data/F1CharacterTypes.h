@@ -39,6 +39,20 @@ struct F1_API FCharacterClassInfo : public FTableRowBase
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Assets")
     TSubclassOf<UAnimInstance> AnimBlueprint;
 
+    // 캐릭터 물리 설정
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Physics", meta = (ClampMin = "10.0", ClampMax = "200.0"))
+    float CapsuleRadius = 42.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Physics", meta = (ClampMin = "30.0", ClampMax = "300.0"))
+    float CapsuleHalfHeight = 96.0f;
+
+    // 메시 위치/회전 조정
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Transform")
+    FVector MeshRelativeLocation = FVector(0.0f, 0.0f, -96.0f);
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Transform")
+    FRotator MeshRelativeRotation = FRotator(0.0f, -90.0f, 0.0f);
+
     // GAS 속성 (Base 클래스에서 가져올 것들)
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Attributes")
     TSubclassOf<UGameplayEffect> DefaultAttributes;

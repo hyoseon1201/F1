@@ -31,10 +31,8 @@ void UF1AbilitySystemComponent::AbilityInputTagHeld(const FGameplayTag& InputTag
 		if (AbilitySpec.DynamicAbilityTags.HasTagExact(InputTag))
 		{
 			AbilitySpecInputPressed(AbilitySpec);
-			if (!AbilitySpec.IsActive())
-			{
-				TryActivateAbility(AbilitySpec.Handle);
-			}
+			if (!AbilitySpec.IsActive()) TryActivateAbility(AbilitySpec.Handle);
+
 		}
 	}
 }
@@ -45,10 +43,7 @@ void UF1AbilitySystemComponent::AbilityInputTagReleased(const FGameplayTag& Inpu
 
 	for (FGameplayAbilitySpec& AbilitySpec : GetActivatableAbilities())
 	{
-		if (AbilitySpec.DynamicAbilityTags.HasTagExact(InputTag))
-		{
-			AbilitySpecInputReleased(AbilitySpec);
-		}
+		if (AbilitySpec.DynamicAbilityTags.HasTagExact(InputTag)) AbilitySpecInputReleased(AbilitySpec);
 	}
 }
 

@@ -12,6 +12,7 @@
 #include "AbilitySystem/F1AbilitySystemComponent.h"
 #include "AbilitySystem/F1AttributeSet.h"
 #include "Net/UnrealNetwork.h"
+#include "Components/CapsuleComponent.h"
 
 AF1HeroCharacter::AF1HeroCharacter()
 {
@@ -122,6 +123,12 @@ void AF1HeroCharacter::ApplyVisualsFromCurrentInfo()
     {
         GetMesh()->SetAnimInstanceClass(CurrentCharacterInfo.AnimBlueprint);
     }
+
+    GetCapsuleComponent()->SetCapsuleRadius(CurrentCharacterInfo.CapsuleRadius);
+    GetCapsuleComponent()->SetCapsuleHalfHeight(CurrentCharacterInfo.CapsuleHalfHeight);
+
+    GetMesh()->SetRelativeLocation(CurrentCharacterInfo.MeshRelativeLocation);
+    GetMesh()->SetRelativeRotation(CurrentCharacterInfo.MeshRelativeRotation);
 }
 
 void AF1HeroCharacter::ApplyLevelUpGrowth()

@@ -11,6 +11,7 @@ class IF1TeamOutlineInterface;
 class AF1CharacterBase;
 class UF1InputConfig;
 class UF1AbilitySystemComponent;
+class USplineComponent;
 
 /**
  * 
@@ -36,7 +37,20 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Input")
 	TObjectPtr<class UInputAction> MoveAction;
 
+	UPROPERTY(EditDefaultsOnly)
+	float AutoRunAcceptanceRadius = 50.f;
+
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<USplineComponent> Spline;
+
+	FVector CachedDestination = FVector::ZeroVector;
+	float FollowTime = 0.f;
+	float ShortPressThreshold = 0.5f;
+	bool bAutoRunning = false;
+	bool bTargeting = false;
+
 	void Move(const struct FInputActionValue& InputActionValue);
+	void AutoRun();
 
 	// ===========================================
 	// Outlining
@@ -44,11 +58,9 @@ private:
 private:
 	void CursorTrace();
 
-	UPROPERTY()
 	AF1CharacterBase* LastActor;
-
-	UPROPERTY()
 	AF1CharacterBase* ThisActor;
+	FHitResult CursorHit;
 
 	float CursorTraceInterval = 0.1f;
 	float LastCursorTraceTime = 0.0f;

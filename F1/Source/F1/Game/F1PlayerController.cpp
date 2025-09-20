@@ -9,10 +9,16 @@
 #include "Input/F1InputComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystem/F1AbilitySystemComponent.h"
+#include "Components/SplineComponent.h"
+#include "GameplayTag/F1GameplayTags.h"
+#include "NavigationPath.h"
+#include "NavigationSystem.h"
 
 AF1PlayerController::AF1PlayerController()
 {
 	bReplicates = true;
+
+    Spline = CreateDefaultSubobject<USplineComponent>("Spline");
 }
 
 void AF1PlayerController::PlayerTick(float DeltaTime)
@@ -24,6 +30,8 @@ void AF1PlayerController::PlayerTick(float DeltaTime)
         CursorTrace();
         LastCursorTraceTime = GetWorld()->GetTimeSeconds();
     }
+
+    AutoRun();
 }
 
 void AF1PlayerController::BeginPlay()
@@ -32,10 +40,7 @@ void AF1PlayerController::BeginPlay()
 	check(F1Context);
 
 	UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer());
-	if (Subsystem)
-    {
-        Subsystem->AddMappingContext(F1Context, 0);
-    }
+	if (Subsystem) Subsystem->AddMappingContext(F1Context, 0);
 
 	bShowMouseCursor = true;
 	DefaultMouseCursor = EMouseCursor::Default;
@@ -71,9 +76,22 @@ void AF1PlayerController::Move(const FInputActionValue& InputActionValue)
 	}
 }
 
+void AF1PlayerController::AutoRun()
+{
+    if (!bAutoRunning) return;
+    if (APawn* ControlledPawn = GetPawn())
+    {
+        const FVector LocationOnSpline = Spline->FindLocationClosestToWorldLocation(ControlledPawn->GetActorLocation(), ESplineCoordinateSpace::World);
+        const FVector Direction = Spline->FindDirectionClosestToWorldLocation(LocationOnSpline, ESplineCoordinateSpace::World);
+        ControlledPawn->AddMovementInput(Direction);
+
+        const float DistanceToDestination = (LocationOnSpline - CachedDestination).Length();
+        if (DistanceToDestination <= AutoRunAcceptanceRadius) bAutoRunning = false;
+    }
+}
+
 void AF1PlayerController::CursorTrace()
 {
-    FHitResult CursorHit;
     GetHitResultUnderCursor(ECC_Visibility, false, CursorHit);
 
     if (!CursorHit.bBlockingHit)
@@ -85,63 +103,91 @@ void AF1PlayerController::CursorTrace()
     LastActor = ThisActor;
     ThisActor = nullptr;
 
-    // 안전한 캐스팅 및 로깅
     if (HitActor)
     {
-        if (AF1CharacterBase* HitCharacter = Cast<AF1CharacterBase>(HitActor))
-        {
-            ThisActor = HitCharacter;
-        }
+        if (AF1CharacterBase* HitCharacter = Cast<AF1CharacterBase>(HitActor)) ThisActor = HitCharacter;
     }
 
-    if (LastActor == nullptr)
+    if (LastActor != ThisActor)
     {
-        if (ThisActor != nullptr)
-        {
-            ThisActor->HighlightActor();
-        }
-    }
-    else
-    {
-        if (ThisActor == nullptr)
-        {
-            LastActor->UnHighlightActor();
-        }
-        else
-        {
-            if (LastActor != ThisActor)
-            {
-                LastActor->UnHighlightActor();
-                ThisActor->HighlightActor();
-            }
-        }
+        if (LastActor) LastActor->UnHighlightActor();
+        if (ThisActor) ThisActor->HighlightActor();
     }
 }
 
 UF1AbilitySystemComponent* AF1PlayerController::GetASC()
 {
-    if (F1AbilitySystemComponent == nullptr)
-    {
-        F1AbilitySystemComponent = Cast<UF1AbilitySystemComponent>(UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetPawn<APawn>()));
-    }
+    if (F1AbilitySystemComponent == nullptr) F1AbilitySystemComponent = Cast<UF1AbilitySystemComponent>(UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetPawn<APawn>()));
     return F1AbilitySystemComponent;
 }
 
 void AF1PlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
 {
-    //GEngine->AddOnScreenDebugMessage(1, 3.f, FColor::Red, *InputTag.ToString());
+    if (InputTag.MatchesTagExact(FF1GameplayTags::Get().InputTag_RMB))
+    {
+        bTargeting = ThisActor ? true : false;
+        bAutoRunning = false;
+    }
 }
 
 void AF1PlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
 {
-    //GEngine->AddOnScreenDebugMessage(3, 3.f, FColor::Green, *InputTag.ToString());
-    if (GetASC() == nullptr) return;
-    GetASC()->AbilityInputTagHeld(InputTag);
+    if (!InputTag.MatchesTagExact(FF1GameplayTags::Get().InputTag_RMB))
+    {
+        if (GetASC()) GetASC()->AbilityInputTagHeld(InputTag);
+        return;
+    }
+
+    if (bTargeting)
+    {
+        if (GetASC()) GetASC()->AbilityInputTagHeld(InputTag);
+    }
+    else
+    {
+        FollowTime += GetWorld()->GetDeltaSeconds();
+
+        if (CursorHit.bBlockingHit) CachedDestination = CursorHit.ImpactPoint;
+
+        if (APawn* ControlledPawn = GetPawn())
+        {
+            const FVector WorldDirection = (CachedDestination - ControlledPawn->GetActorLocation()).GetSafeNormal();
+            ControlledPawn->AddMovementInput(WorldDirection);
+        }
+    }
 }
 
 void AF1PlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 {
-    //GEngine->AddOnScreenDebugMessage(2, 3.f, FColor::Blue, *InputTag.ToString());
-    if (GetASC() == nullptr) return;
-    GetASC()->AbilityInputTagReleased(InputTag);
+    if (!InputTag.MatchesTagExact(FF1GameplayTags::Get().InputTag_RMB))
+    {
+        if (GetASC()) GetASC()->AbilityInputTagReleased(InputTag);
+        return;
+    }
+
+    if (bTargeting)
+    {
+        if (GetASC()) GetASC()->AbilityInputTagReleased(InputTag);
+    }
+    else
+    {
+        const APawn* ControlledPawn = GetPawn();
+        if (FollowTime <= ShortPressThreshold && ControlledPawn)
+        {
+            if (UNavigationPath* NavPath = UNavigationSystemV1::FindPathToLocationSynchronously(this, ControlledPawn->GetActorLocation(), CachedDestination))
+            {
+                if (NavPath->PathPoints.Num() > 0)
+                {
+                    Spline->ClearSplinePoints();
+                    for (const FVector& PointLoc : NavPath->PathPoints)
+                    {
+                        Spline->AddSplinePoint(PointLoc, ESplineCoordinateSpace::World);
+                    }
+                    CachedDestination = NavPath->PathPoints.Last();
+                    bAutoRunning = true;
+                }
+            }
+        }
+        FollowTime = 0.f;
+        bTargeting = false;
+    }
 }
