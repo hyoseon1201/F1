@@ -4,10 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
+#include "GameplayTagContainer.h"
 #include "F1PlayerController.generated.h"
 
 class IF1TeamOutlineInterface;
 class AF1CharacterBase;
+class UF1InputConfig;
+class UF1AbilitySystemComponent;
 
 /**
  * 
@@ -49,4 +52,20 @@ private:
 
 	float CursorTraceInterval = 0.1f;
 	float LastCursorTraceTime = 0.0f;
+
+	// ===========================================
+	// Input
+	// ===========================================
+private:
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<UF1InputConfig> InputConfig;
+
+	UPROPERTY()
+	TObjectPtr<UF1AbilitySystemComponent> F1AbilitySystemComponent;
+
+	UF1AbilitySystemComponent* GetASC();
+
+	void AbilityInputTagPressed(FGameplayTag InputTag);
+	void AbilityInputTagHeld(FGameplayTag InputTag);
+	void AbilityInputTagReleased(FGameplayTag InputTag);
 };

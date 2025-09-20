@@ -6,6 +6,9 @@
 #include "EnhancedInputComponent.h"
 #include "Interaction/F1TeamOutlineInterface.h"
 #include "Character/F1CharacterBase.h"
+#include "Input/F1InputComponent.h"
+#include "AbilitySystemBlueprintLibrary.h"
+#include "AbilitySystem/F1AbilitySystemComponent.h"
 
 AF1PlayerController::AF1PlayerController()
 {
@@ -47,9 +50,9 @@ void AF1PlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
 
-	UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(InputComponent);
-
-	EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AF1PlayerController::Move);
+    UF1InputComponent* F1InputComponent = CastChecked<UF1InputComponent>(InputComponent);
+    F1InputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AF1PlayerController::Move);
+    F1InputComponent->BindAbilityActions(InputConfig, this, &ThisClass::AbilityInputTagPressed, &ThisClass::AbilityInputTagReleased, &ThisClass::AbilityInputTagHeld);
 }
 
 void AF1PlayerController::Move(const FInputActionValue& InputActionValue)
@@ -113,4 +116,32 @@ void AF1PlayerController::CursorTrace()
             }
         }
     }
+}
+
+UF1AbilitySystemComponent* AF1PlayerController::GetASC()
+{
+    if (F1AbilitySystemComponent == nullptr)
+    {
+        F1AbilitySystemComponent = Cast<UF1AbilitySystemComponent>(UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetPawn<APawn>()));
+    }
+    return F1AbilitySystemComponent;
+}
+
+void AF1PlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
+{
+    //GEngine->AddOnScreenDebugMessage(1, 3.f, FColor::Red, *InputTag.ToString());
+}
+
+void AF1PlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
+{
+    //GEngine->AddOnScreenDebugMessage(3, 3.f, FColor::Green, *InputTag.ToString());
+    if (GetASC() == nullptr) return;
+    GetASC()->AbilityInputTagHeld(InputTag);
+}
+
+void AF1PlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
+{
+    //GEngine->AddOnScreenDebugMessage(2, 3.f, FColor::Blue, *InputTag.ToString());
+    if (GetASC() == nullptr) return;
+    GetASC()->AbilityInputTagReleased(InputTag);
 }
