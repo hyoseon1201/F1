@@ -11,6 +11,13 @@ class USkeletalMesh;
 class UAnimInstance;
 class UTexture2D;
 
+UENUM(BlueprintType)
+enum class EAttackType : uint8
+{
+    Melee       UMETA(DisplayName = "Melee"),
+    Ranged      UMETA(DisplayName = "Ranged")
+};
+
 /**
  * 캐릭터 클래스 정보 구조체
  * DataTable에서 각 챔피언의 모든 정보를 정의
@@ -59,4 +66,7 @@ struct F1_API FCharacterClassInfo : public FTableRowBase
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Attributes")
     TSubclassOf<UGameplayEffect> GrowthAttributes;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Combat")
+    EAttackType AttackType = EAttackType::Melee;
 };

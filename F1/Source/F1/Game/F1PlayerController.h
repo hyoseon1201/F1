@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
 #include "GameplayTagContainer.h"
+#include "GenericTeamAgentInterface.h"
 #include "F1PlayerController.generated.h"
 
 class IF1TeamOutlineInterface;
@@ -25,6 +26,12 @@ public:
 	AF1PlayerController();
 
 	virtual void PlayerTick(float DeltaTime) override;
+
+	UFUNCTION(BlueprintCallable, Category = "Team")
+	ETeamAttitude::Type GetTeamAttitudeTowards(const AActor* Actor) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Movement")
+	void StartMovementToDestination();
 
 protected:
 	virtual void BeginPlay() override;
@@ -80,4 +87,10 @@ private:
 	void AbilityInputTagPressed(FGameplayTag InputTag);
 	void AbilityInputTagHeld(FGameplayTag InputTag);
 	void AbilityInputTagReleased(FGameplayTag InputTag);
+
+	// ===========================================
+	// Combat
+	// ===========================================
+private:
+	bool IsEnemy(const AActor* Actor) const;
 };

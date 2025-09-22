@@ -102,6 +102,5 @@ void AF1CharacterBase::AddCharacterAbilities()
 {
     UF1AbilitySystemComponent* F1ASC = CastChecked<UF1AbilitySystemComponent>(AbilitySystemComponent);
     if (!HasAuthority()) return;
-
     F1ASC->AddCharacterAbilities(StartupAbilities);
 }

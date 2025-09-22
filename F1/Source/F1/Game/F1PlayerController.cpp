@@ -34,6 +34,41 @@ void AF1PlayerController::PlayerTick(float DeltaTime)
     AutoRun();
 }
 
+ETeamAttitude::Type AF1PlayerController::GetTeamAttitudeTowards(const AActor* Actor) const
+{
+    const APawn* MyPawn = GetPawn();
+    if (!MyPawn || !Actor) return ETeamAttitude::Neutral;
+
+    const IGenericTeamAgentInterface* MyTeam = Cast<IGenericTeamAgentInterface>(MyPawn);
+    const IGenericTeamAgentInterface* TargetTeam = Cast<IGenericTeamAgentInterface>(Actor);
+
+    if (!MyTeam || !TargetTeam) return ETeamAttitude::Neutral;
+
+    return FGenericTeamId::GetAttitude(MyTeam->GetGenericTeamId(), TargetTeam->GetGenericTeamId());
+
+}
+
+void AF1PlayerController::StartMovementToDestination()
+{
+    const APawn* ControlledPawn = GetPawn();
+    if (!ControlledPawn) return;
+
+    if (UNavigationPath* NavPath = UNavigationSystemV1::FindPathToLocationSynchronously(
+        this, ControlledPawn->GetActorLocation(), CachedDestination))
+    {
+        if (NavPath->PathPoints.Num() > 0)
+        {
+            Spline->ClearSplinePoints();
+            for (const FVector& PointLoc : NavPath->PathPoints)
+            {
+                Spline->AddSplinePoint(PointLoc, ESplineCoordinateSpace::World);
+            }
+            CachedDestination = NavPath->PathPoints.Last();
+            bAutoRunning = true;
+        }
+    }
+}
+
 void AF1PlayerController::BeginPlay()
 {
 	Super::BeginPlay();
@@ -164,30 +199,36 @@ void AF1PlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
         return;
     }
 
-    if (bTargeting)
+    if (bTargeting && ThisActor)
     {
-        if (GetASC()) GetASC()->AbilityInputTagReleased(InputTag);
+        if (IsEnemy(ThisActor))
+        {
+            // 적군/중립 → 공격
+        }
+        else
+        {
+            // 아군 → 이동
+            CachedDestination = ThisActor->GetActorLocation();
+            StartMovementToDestination();
+        }
     }
     else
     {
+        // 빈 땅 클릭 → 이동
         const APawn* ControlledPawn = GetPawn();
         if (FollowTime <= ShortPressThreshold && ControlledPawn)
         {
-            if (UNavigationPath* NavPath = UNavigationSystemV1::FindPathToLocationSynchronously(this, ControlledPawn->GetActorLocation(), CachedDestination))
-            {
-                if (NavPath->PathPoints.Num() > 0)
-                {
-                    Spline->ClearSplinePoints();
-                    for (const FVector& PointLoc : NavPath->PathPoints)
-                    {
-                        Spline->AddSplinePoint(PointLoc, ESplineCoordinateSpace::World);
-                    }
-                    CachedDestination = NavPath->PathPoints.Last();
-                    bAutoRunning = true;
-                }
-            }
+            StartMovementToDestination();
         }
-        FollowTime = 0.f;
-        bTargeting = false;
     }
+
+    FollowTime = 0.f;
+    bTargeting = false;
+}
+
+bool AF1PlayerController::IsEnemy(const AActor* Actor) const
+{
+    ETeamAttitude::Type Attitude = GetTeamAttitudeTowards(Actor);
+
+    return Attitude == ETeamAttitude::Hostile || Attitude == ETeamAttitude::Neutral;
 }

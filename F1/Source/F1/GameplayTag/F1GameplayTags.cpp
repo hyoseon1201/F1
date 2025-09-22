@@ -302,4 +302,35 @@ void FF1GameplayTags::InitializeNativeGameplayTags()
         FName("DamageType.True"),
         FString("True damage type")
     );
+
+    // ===========================================
+    // Damage Tags (SetByCaller¿ë)
+    // ===========================================
+    GameplayTags.Damage_Basic = Manager.AddNativeGameplayTag(
+        FName("Damage.Basic"),
+        FString("Basic Attack Damage"));
+
+    GameplayTags.Damage_Skill_Q = Manager.AddNativeGameplayTag(
+        FName("Damage.Skill.Q"),
+        FString("Q Skill Damage"));
+
+    GameplayTags.Damage_Skill_W = Manager.AddNativeGameplayTag(
+        FName("Damage.Skill.W"),
+        FString("W Skill Damage"));
+
+    GameplayTags.Damage_Skill_E = Manager.AddNativeGameplayTag(
+        FName("Damage.Skill.E"),
+        FString("E Skill Damage"));
+
+    GameplayTags.Damage_Skill_R = Manager.AddNativeGameplayTag(
+        FName("Damage.Skill.R"),
+        FString("R Skill Ultimate Damage"));
+
+    GameplayTags.Damage_DOT = Manager.AddNativeGameplayTag(
+        FName("Damage.DOT"),
+        FString("Damage Over Time"));
+
+    GameplayTags.Damage_Execute = Manager.AddNativeGameplayTag(
+        FName("Damage.Execute"),
+        FString("Execute Damage"));
 }
