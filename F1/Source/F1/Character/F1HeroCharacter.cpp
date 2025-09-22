@@ -204,7 +204,7 @@ void AF1HeroCharacter::InitAbilityActorInfo()
 
     if (HasAuthority())
     {
-        SetCharacterClass(FName("Crunch"));
+        SetCharacterClass(FName("Dekker"));
     }
     else
     {
