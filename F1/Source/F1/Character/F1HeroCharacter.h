@@ -28,12 +28,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Character")
 	void SetCharacterClass(FName CharacterRowName);
 
-	UFUNCTION(BlueprintPure, Category = "Character Level")
-	int32 GetCurrentLevel() const;
-
-	UFUNCTION(BlueprintPure, Category = "Character Level")
-	float GetCurrentExperience() const;
-
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Data")
 	UDataTable* CharacterClassDataTable = nullptr;
@@ -48,9 +42,24 @@ protected:
 	void OnRep_CurrentCharacterInfo();
 
 	void ApplyVisualsFromCurrentInfo();
-	void ApplyLevelUpGrowth();
-	void ApplyGrowthForCurrentLevel();
 	void SyncMovementSpeedWithAttributeSet();
+
+	// ===========================================
+	// Combat System
+	// ===========================================
+protected:
+	virtual void UpdateCombatSocketsFromCharacterInfo() override;
+
 private:
 	virtual void InitAbilityActorInfo() override;
+
+	// ===========================================
+	// Combat Interface
+	// ===========================================
+public:
+	virtual int32 GetCurrentLevel() const override;
+	virtual float GetCurrentExperience() const override;
+	virtual void ApplyLevelBasedGrowth() override;
+
+	virtual FVector GetCombatSocketLocation() override;
 };

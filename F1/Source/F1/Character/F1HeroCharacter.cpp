@@ -77,12 +77,14 @@ void AF1HeroCharacter::SetCharacterClass(FName CharacterRowName)
     DefaultAttributes = CurrentCharacterInfo.DefaultAttributes;
     GrowthAttributes = CurrentCharacterInfo.GrowthAttributes;
 
+    UpdateCombatSocketsFromCharacterInfo();
+
     if (DefaultAttributes)
     {
         InitializeDefaultAttributes();
     }
 
-    ApplyGrowthForCurrentLevel();
+    ApplyLevelBasedGrowth();
 
     ApplyVisualsFromCurrentInfo();
     
@@ -91,20 +93,41 @@ void AF1HeroCharacter::SetCharacterClass(FName CharacterRowName)
 
 int32 AF1HeroCharacter::GetCurrentLevel() const
 {
-    if (const UF1AttributeSet* AS = Cast<UF1AttributeSet>(AttributeSet))
-    {
-        return FMath::TruncToInt(AS->GetCharacterLevel());
-    }
-    return 1;
+    int32 BaseLevel = Super::GetCurrentLevel();
+
+    return BaseLevel;
 }
 
 float AF1HeroCharacter::GetCurrentExperience() const
 {
-    if (const UF1AttributeSet* AS = Cast<UF1AttributeSet>(AttributeSet))
+    return Super::GetCurrentExperience();
+}
+
+void AF1HeroCharacter::ApplyLevelBasedGrowth()
+{
+    if (!HasAuthority() || !GrowthAttributes)
     {
-        return AS->GetExperience();
+        return;
     }
-    return 0.0f;
+
+    int32 CurrentLevel = GetCurrentLevel();
+    if (CurrentLevel <= 1)
+    {
+        return;
+    }
+
+    const FGameplayEffectContextHandle ContextHandle = GetAbilitySystemComponent()->MakeEffectContext();
+    const FGameplayEffectSpecHandle SpecHandle = GetAbilitySystemComponent()->MakeOutgoingSpec(
+        GrowthAttributes,
+        CurrentLevel - 1,
+        ContextHandle
+    );
+    GetAbilitySystemComponent()->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+}
+
+FVector AF1HeroCharacter::GetCombatSocketLocation()
+{
+    return Super::GetCombatSocketLocation();
 }
 
 void AF1HeroCharacter::OnRep_CurrentCharacterInfo()
@@ -131,35 +154,6 @@ void AF1HeroCharacter::ApplyVisualsFromCurrentInfo()
     GetMesh()->SetRelativeRotation(CurrentCharacterInfo.MeshRelativeRotation);
 }
 
-void AF1HeroCharacter::ApplyLevelUpGrowth()
-{
-    if (!HasAuthority()) return;
-    check(IsValid(GetAbilitySystemComponent()));
-
-    if (!GrowthAttributes)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("GrowthAttributes is null for hero!"));
-        return;
-    }
-
-    const FGameplayEffectContextHandle ContextHandle = GetAbilitySystemComponent()->MakeEffectContext();
-    const FGameplayEffectSpecHandle SpecHandle = GetAbilitySystemComponent()->MakeOutgoingSpec(GrowthAttributes, 1.f, ContextHandle);
-    GetAbilitySystemComponent()->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
-}
-
-void AF1HeroCharacter::ApplyGrowthForCurrentLevel()
-{
-    if (!HasAuthority() || !GrowthAttributes) return;
-
-    int32 CurrentLevel = GetCurrentLevel();
-
-    if (CurrentLevel <= 1) return;
-
-    const FGameplayEffectContextHandle ContextHandle = GetAbilitySystemComponent()->MakeEffectContext();
-    const FGameplayEffectSpecHandle SpecHandle = GetAbilitySystemComponent()->MakeOutgoingSpec(GrowthAttributes, CurrentLevel - 1, ContextHandle);
-    GetAbilitySystemComponent()->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
-}
-
 void AF1HeroCharacter::SyncMovementSpeedWithAttributeSet()
 {
     if (const UF1AttributeSet* AS = Cast<UF1AttributeSet>(AttributeSet))
@@ -172,6 +166,13 @@ void AF1HeroCharacter::SyncMovementSpeedWithAttributeSet()
     }
 }
 
+void AF1HeroCharacter::UpdateCombatSocketsFromCharacterInfo()
+{
+    WeaponTipSocketName = CurrentCharacterInfo.WeaponTipSocketName;
+    MuzzleSocketName = CurrentCharacterInfo.MuzzleSocketName;
+    HandSocketName = CurrentCharacterInfo.HandSocketName;
+    ChestSocketName = CurrentCharacterInfo.ChestSocketName;
+}
 
 void AF1HeroCharacter::InitAbilityActorInfo()
 {

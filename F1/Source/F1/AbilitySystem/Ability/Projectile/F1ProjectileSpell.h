@@ -6,6 +6,8 @@
 #include "AbilitySystem/Ability/F1GameplayAbility.h"
 #include "F1ProjectileSpell.generated.h"
 
+class AF1Projectile;
+
 /**
  * 
  */
@@ -16,4 +18,7 @@ class F1_API UF1ProjectileSpell : public UF1GameplayAbility
 	
 protected:
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TSubclassOf<AF1Projectile> ProjectileClass;
 };

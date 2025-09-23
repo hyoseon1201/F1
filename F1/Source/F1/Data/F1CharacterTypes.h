@@ -69,4 +69,17 @@ struct F1_API FCharacterClassInfo : public FTableRowBase
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Combat")
     EAttackType AttackType = EAttackType::Melee;
+
+    // 소켓 정보 추가
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat Sockets")
+    FName WeaponTipSocketName = FName("WeaponTip");
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat Sockets")
+    FName MuzzleSocketName = FName("Muzzle");
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat Sockets")
+    FName HandSocketName = FName("RightHand");
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat Sockets")
+    FName ChestSocketName = FName("Chest");
 };

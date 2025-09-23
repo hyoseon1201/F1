@@ -3,6 +3,7 @@
 #include "GameFramework/Character.h"
 #include "GenericTeamAgentInterface.h"
 #include "Interaction/F1TeamOutlineInterface.h"
+#include "Interaction/F1CombatInterface.h"
 #include "AbilitySystemInterface.h"
 #include "F1CharacterBase.generated.h"
 
@@ -15,7 +16,8 @@ UCLASS()
 class F1_API AF1CharacterBase : public ACharacter,
     public IGenericTeamAgentInterface,
     public IF1TeamOutlineInterface,
-    public IAbilitySystemInterface
+    public IAbilitySystemInterface,
+    public IF1CombatInterface
 {
     GENERATED_BODY()
 
@@ -26,6 +28,7 @@ protected:
     virtual void BeginPlay() override;
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
     virtual void InitAbilityActorInfo();
+
     // ===========================================
     // Team system
     // ===========================================
@@ -50,6 +53,33 @@ public:
 private:
     bool IsEnemyToPlayer() const;
 
+    // ===========================================
+    // Combat Interface
+    // ===========================================
+public:
+    virtual int32 GetCurrentLevel() const override;
+    virtual float GetCurrentExperience() const override;
+    virtual void ApplyLevelBasedGrowth() override;
+
+    virtual FVector GetCombatSocketLocation() override;
+
+    // ===========================================
+    // Combat System
+    // ===========================================
+protected:
+    UPROPERTY(BlueprintReadOnly, Category = "Combat|Sockets")
+    FName WeaponTipSocketName = FName("WeaponTip");
+
+    UPROPERTY(BlueprintReadOnly, Category = "Combat|Sockets")
+    FName MuzzleSocketName = FName("Muzzle");
+
+    UPROPERTY(BlueprintReadOnly, Category = "Combat|Sockets")
+    FName HandSocketName = FName("RightHand");
+
+    UPROPERTY(BlueprintReadOnly, Category = "Combat|Sockets")
+    FName ChestSocketName = FName("Chest");
+
+    virtual void UpdateCombatSocketsFromCharacterInfo();
 
     // ===========================================
     // GAS
