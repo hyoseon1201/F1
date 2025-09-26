@@ -163,13 +163,19 @@ void AF1PlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
         bTargeting = ThisActor ? true : false;
         bAutoRunning = false;
     }
+    else
+    {
+        if (GetASC())
+        {
+            GetASC()->AbilityInputTagPressed(InputTag);
+        }
+    }
 }
 
 void AF1PlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
 {
     if (!InputTag.MatchesTagExact(FF1GameplayTags::Get().InputTag_RMB))
     {
-        if (GetASC()) GetASC()->AbilityInputTagHeld(InputTag);
         return;
     }
 

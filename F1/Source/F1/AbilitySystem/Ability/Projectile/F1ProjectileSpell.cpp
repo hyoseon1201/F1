@@ -1,36 +1,52 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "AbilitySystem/Ability/Projectile/F1ProjectileSpell.h"
 #include "AbilitySystem/Actor/F1Projectile.h"
-#include <Interaction/F1CombatInterface.h>
+#include "Interaction/F1CombatInterface.h"
 
-void UF1ProjectileSpell::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
+void UF1ProjectileSpell::SpawnProjectile(const FVector& ProjectileTargetLocation)
 {
-	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
-
-	const bool bIsServer = HasAuthority(&ActivationInfo);
+	const bool bIsServer = GetAvatarActorFromActorInfo()->HasAuthority();
 	if (!bIsServer) return;
 
-	IF1CombatInterface* F1CombatInterface = Cast<IF1CombatInterface>(GetAvatarActorFromActorInfo());
+	const FVector SocketLocation = GetProjectileSpawnLocation();
+	const FRotator Rotation = GetProjectileRotation(ProjectileTargetLocation);
 
-	if (F1CombatInterface)
+	FTransform SpawnTransform;
+	SpawnTransform.SetLocation(SocketLocation);
+	SpawnTransform.SetRotation(Rotation.Quaternion());
+
+	AF1Projectile* Projectile = GetWorld()->SpawnActorDeferred<AF1Projectile>(
+		ProjectileClass,
+		SpawnTransform,
+		GetOwningActorFromActorInfo(),
+		Cast<APawn>(GetOwningActorFromActorInfo()),
+		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+
+	ApplyDamageEffect(Projectile);
+
+	Projectile->FinishSpawning(SpawnTransform);
+}
+
+FVector UF1ProjectileSpell::GetProjectileSpawnLocation() const
+{
+	if (IF1CombatInterface* F1CombatInterface = Cast<IF1CombatInterface>(GetAvatarActorFromActorInfo()))
 	{
-		const FVector SocketLocation = F1CombatInterface->GetCombatSocketLocation();
-
-		FTransform SpawnTransform;
-		SpawnTransform.SetLocation(SocketLocation);
-		// TODO : 로테이션 설정
-
-		AF1Projectile* Projectile = GetWorld()->SpawnActorDeferred<AF1Projectile>(
-			ProjectileClass,
-			SpawnTransform,
-			GetOwningActorFromActorInfo(),
-			Cast<APawn>(GetOwningActorFromActorInfo()),
-			ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
-
-		// TODO : 프로젝타일에 GE 부여
-
-		Projectile->FinishSpawning(SpawnTransform);
+		return F1CombatInterface->GetCombatSocketLocation();
 	}
+	return GetAvatarActorFromActorInfo()->GetActorLocation();
+}
+
+FRotator UF1ProjectileSpell::GetProjectileRotation(const FVector& TargetLocation) const
+{
+	const FVector SocketLocation = GetProjectileSpawnLocation();
+	FRotator Rotation = (TargetLocation - SocketLocation).Rotation();
+	Rotation.Pitch = 0.f;
+	return Rotation;
+}
+
+void UF1ProjectileSpell::ApplyDamageEffect(AF1Projectile* Projectile)
+{
+	// TODO : 프로젝타일에 GE 부여
+	// Projectile->SetDamage(BaseDamage);
 }

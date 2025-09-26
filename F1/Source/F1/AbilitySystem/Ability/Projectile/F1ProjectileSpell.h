@@ -8,17 +8,33 @@
 
 class AF1Projectile;
 
-/**
- * 
- */
-UCLASS()
+UCLASS(Abstract)
 class F1_API UF1ProjectileSpell : public UF1GameplayAbility
 {
 	GENERATED_BODY()
-	
-protected:
-	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Projectile")
 	TSubclassOf<AF1Projectile> ProjectileClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spell Config")
+	float AbilityRange = 800.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Projectile")
+	float ProjectileSpeed = 1000.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spell Config")
+	float BaseDamage = 50.0f;
+
+	UFUNCTION(BlueprintCallable, Category = "Projectile")
+	virtual void SpawnProjectile(const FVector& ProjectileTargetLocation);
+
+	UFUNCTION(BlueprintCallable, Category = "Projectile")
+	virtual FVector GetProjectileSpawnLocation() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Projectile")
+	virtual FRotator GetProjectileRotation(const FVector& TargetLocation) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Projectile")
+	virtual void ApplyDamageEffect(AF1Projectile* Projectile);
 };

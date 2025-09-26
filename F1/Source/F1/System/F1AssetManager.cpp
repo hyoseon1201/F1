@@ -2,6 +2,7 @@
 
 
 #include "System/F1AssetManager.h"
+#include "AbilitySystemGlobals.h"
 #include "GameplayTag/F1GameplayTags.h"
 
 UF1AssetManager& UF1AssetManager::Get()
@@ -16,4 +17,6 @@ void UF1AssetManager::StartInitialLoading()
 	Super::StartInitialLoading();
 
 	FF1GameplayTags::InitializeNativeGameplayTags();
+
+	UAbilitySystemGlobals::Get().InitGlobalData();
 }
