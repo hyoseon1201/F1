@@ -8,6 +8,8 @@
 #include "GenericTeamAgentInterface.h"
 #include "F1PlayerController.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAutoRunCompleted);
+
 class IF1TeamOutlineInterface;
 class AF1CharacterBase;
 class UF1InputConfig;
@@ -25,6 +27,12 @@ class F1_API AF1PlayerController : public APlayerController
 public:
 	AF1PlayerController();
 
+	UPROPERTY(BlueprintAssignable)
+	FOnAutoRunCompleted OnAutoRunCompleted;
+
+	UFUNCTION(BlueprintCallable)
+	void StartAbilityMovementToDestination(const FVector& Destination);
+
 	virtual void PlayerTick(float DeltaTime) override;
 
 	UFUNCTION(BlueprintCallable, Category = "Team")
@@ -41,9 +49,6 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Input")
 	TObjectPtr<class UInputMappingContext> F1Context;
 
-	UPROPERTY(EditAnywhere, Category = "Input")
-	TObjectPtr<class UInputAction> MoveAction;
-
 	UPROPERTY(EditDefaultsOnly)
 	float AutoRunAcceptanceRadius = 50.f;
 
@@ -56,7 +61,6 @@ private:
 	bool bAutoRunning = false;
 	bool bTargeting = false;
 
-	void Move(const struct FInputActionValue& InputActionValue);
 	void AutoRun();
 
 	// ===========================================

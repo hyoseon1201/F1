@@ -1,6 +1,9 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "AbilitySystem/Ability/Projectile/F1TargetProjectileSpell.h"
+#include "NavigationPath.h"
+#include "NavigationSystem.h"
+#include "Game/F1PlayerController.h"
 
 void UF1TargetProjectileSpell::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
@@ -27,6 +30,67 @@ void UF1TargetProjectileSpell::HandleRangeAndCast(const FVector& TargetLocation)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[TargetProjectileSpell] Target is out of range - MoveToRangeAndCast"));
 		MoveToRangeAndCast(TargetLocation);
+	}
+}
+
+void UF1TargetProjectileSpell::StartAutoMovement(const FVector& MoveLocation, const FVector& CastLocation)
+{
+	StopAutoMovement();
+
+	APawn* AvatarPawn = Cast<APawn>(GetAvatarActorFromActorInfo());
+	AF1PlayerController* F1PlayerController = Cast<AF1PlayerController>(AvatarPawn->GetController());
+
+	if (!F1PlayerController) return;
+
+	bIsAutoMoving = true;
+	AutoMoveTargetLocation = MoveLocation;
+	AutoMoveCastLocation = CastLocation;
+
+	// 델리게이트 바인딩 (이동 완료 시 자동 호출됨)
+	F1PlayerController->OnAutoRunCompleted.AddDynamic(this, &UF1TargetProjectileSpell::OnAutoMoveCompleted);
+
+	// PlayerController 이동 시작
+	F1PlayerController->StartAbilityMovementToDestination(MoveLocation);
+
+	UE_LOG(LogTemp, Warning, TEXT("[TargetProjectileSpell] Auto movement started with delegate"));
+}
+
+void UF1TargetProjectileSpell::StopAutoMovement()
+{
+	if (!bIsAutoMoving) return;
+
+	bIsAutoMoving = false;
+
+	// 델리게이트 언바인딩
+	APawn* AvatarPawn = Cast<APawn>(GetAvatarActorFromActorInfo());
+	if (AF1PlayerController* F1PlayerController = Cast<AF1PlayerController>(AvatarPawn->GetController()))
+	{
+		F1PlayerController->OnAutoRunCompleted.RemoveDynamic(this, &UF1TargetProjectileSpell::OnAutoMoveCompleted);
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("[TargetProjectileSpell] Auto movement stopped"));
+}
+
+void UF1TargetProjectileSpell::OnAutoMoveCompleted()
+{
+	UE_LOG(LogTemp, Warning, TEXT("[TargetProjectileSpell] Auto movement completed, executing cast"));
+
+	// 자동 이동 상태 정리
+	StopAutoMovement();
+
+	// 스킬 시전
+	ExecuteCast(AutoMoveCastLocation);
+}
+
+void UF1TargetProjectileSpell::OnPlayerInputDetected()
+{
+	if (bIsAutoMoving)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[TargetProjectileSpell] Player input detected, canceling auto movement"));
+		StopAutoMovement();
+
+		// 필요시 Ability 자체를 종료할 수도 있음
+		// EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 	}
 }
 
@@ -61,8 +125,17 @@ void UF1TargetProjectileSpell::ExecuteCast(const FVector& TargetLocation)
 
 void UF1TargetProjectileSpell::MoveToRangeAndCast(const FVector& TargetLocation)
 {
+	// 서버 권한 체크
+	if (!GetAvatarActorFromActorInfo()->HasAuthority())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[TargetProjectileSpell] MoveToRangeAndCast called without authority"));
+		return;
+	}
+
 	const FVector MoveToLocation = GetRangeLocation(TargetLocation);
-	UE_LOG(LogTemp, Warning, TEXT("[TargetProjectileSpell] MoveToRangeAndCast - MoveLocation: %s, CastLocation: %s"),
+	UE_LOG(LogTemp, Warning, TEXT("[TargetProjectileSpell] Starting auto movement to: %s for casting at: %s"),
 		*MoveToLocation.ToString(), *TargetLocation.ToString());
-	K2_MoveToRangeAndCast(MoveToLocation, TargetLocation);
+
+	// 자동 이동 시작
+	StartAutoMovement(MoveToLocation, TargetLocation);
 }

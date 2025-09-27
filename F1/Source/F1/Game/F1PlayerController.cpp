@@ -69,6 +69,12 @@ void AF1PlayerController::StartMovementToDestination()
     }
 }
 
+void AF1PlayerController::StartAbilityMovementToDestination(const FVector& Destination)
+{
+    CachedDestination = Destination;
+    StartMovementToDestination();
+}
+
 void AF1PlayerController::BeginPlay()
 {
 	Super::BeginPlay();
@@ -91,24 +97,7 @@ void AF1PlayerController::SetupInputComponent()
 	Super::SetupInputComponent();
 
     UF1InputComponent* F1InputComponent = CastChecked<UF1InputComponent>(InputComponent);
-    F1InputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AF1PlayerController::Move);
     F1InputComponent->BindAbilityActions(InputConfig, this, &ThisClass::AbilityInputTagPressed, &ThisClass::AbilityInputTagReleased, &ThisClass::AbilityInputTagHeld);
-}
-
-void AF1PlayerController::Move(const FInputActionValue& InputActionValue)
-{
-	const FVector2D InputAxisVector = InputActionValue.Get<FVector2D>();
-	const FRotator Rotation = GetControlRotation();
-	const FRotator YawRotation(0.f, Rotation.Yaw, 0.f);
-
-	const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-	const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
-
-	if (APawn* ControlledPawn = GetPawn<APawn>())
-	{
-		ControlledPawn->AddMovementInput(ForwardDirection, InputAxisVector.Y);
-		ControlledPawn->AddMovementInput(RightDirection, InputAxisVector.X);
-	}
 }
 
 void AF1PlayerController::AutoRun()
@@ -121,7 +110,13 @@ void AF1PlayerController::AutoRun()
         ControlledPawn->AddMovementInput(Direction);
 
         const float DistanceToDestination = (LocationOnSpline - CachedDestination).Length();
-        if (DistanceToDestination <= AutoRunAcceptanceRadius) bAutoRunning = false;
+        if (DistanceToDestination <= AutoRunAcceptanceRadius)
+        {
+            bAutoRunning = false;
+
+            // 자동 이동 완료 델리게이트 호출
+            OnAutoRunCompleted.Broadcast();
+        }
     }
 }
 

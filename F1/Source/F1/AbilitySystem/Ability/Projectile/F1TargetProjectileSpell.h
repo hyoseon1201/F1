@@ -20,12 +20,38 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = "Target Projectile")
 	void K2_ExecuteCast(const FVector& TargetLocation);
 
-	UFUNCTION(BlueprintImplementableEvent, Category = "Target Projectile")
-	void K2_MoveToRangeAndCast(const FVector& MoveLocation, const FVector& CastLocation);
+    // 자동 이동 처리 함수들
+    UFUNCTION()
+    void StartAutoMovement(const FVector& MoveLocation, const FVector& CastLocation);
+
+    UFUNCTION()
+    void StopAutoMovement();
+
+    UFUNCTION()
+    void OnAutoMoveCompleted();
+
+    // 입력 감지 및 취소 처리
+    UFUNCTION()
+    void OnPlayerInputDetected();
 
 private:
 	bool IsWithinRange(const FVector& TargetLocation) const;
 	FVector GetRangeLocation(const FVector& TargetLocation) const;
 	void ExecuteCast(const FVector& TargetLocation);
 	void MoveToRangeAndCast(const FVector& TargetLocation);
+
+    UPROPERTY()
+    bool bIsAutoMoving = false;
+
+    UPROPERTY()
+    FVector AutoMoveTargetLocation;
+
+    UPROPERTY()
+    FVector AutoMoveCastLocation;
+
+    UPROPERTY()
+    FTimerHandle AutoMoveCheckTimer;
+
+    UPROPERTY(EditAnywhere, Category = "Auto Move")
+    float MovementAcceptanceRadius = 50.0f;
 };
