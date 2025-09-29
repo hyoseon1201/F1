@@ -38,27 +38,6 @@ void UF1TargetDataValidTarget::SendMouseCursorData()
 	FHitResult CursorHit;
 	PC->GetHitResultUnderCursor(ECC_Visibility, false, CursorHit);
 
-	AActor* TargetActor = CursorHit.GetActor();
-	UE_LOG(LogTemp, Warning, TEXT("[TargetDataValidTarget] SendMouseCursorData - Hit Actor: %s"),
-		TargetActor ? *TargetActor->GetName() : TEXT("NULL"));
-
-	UE_LOG(LogTemp, Warning, TEXT("[TargetDataValidTarget] Hit Location: %s"), *CursorHit.Location.ToString());
-
-	// 타겟 유효성 검사
-	if (!IsValidTarget(TargetActor))
-	{
-		UE_LOG(LogTemp, Error, TEXT("[TargetDataValidTarget] Invalid target - Broadcasting NoValidTarget"));
-		if (ShouldBroadcastAbilityTaskDelegates())
-		{
-			NoValidTarget.Broadcast();
-		}
-		return;
-	}
-
-	UE_LOG(LogTemp, Warning, TEXT("[TargetDataValidTarget] Valid target found - Broadcasting ValidTarget"));
-	// ... 나머지 코드
-
-	// 유효한 타겟 - 기존 로직대로 진행
 	FGameplayAbilityTargetDataHandle DataHandle;
 	FGameplayAbilityTargetData_SingleTargetHit* Data = new FGameplayAbilityTargetData_SingleTargetHit();
 	Data->HitResult = CursorHit;
@@ -73,9 +52,18 @@ void UF1TargetDataValidTarget::SendMouseCursorData()
 
 	if (ShouldBroadcastAbilityTaskDelegates())
 	{
-		ValidTarget.Broadcast(DataHandle);
+		AActor* TargetActor = CursorHit.GetActor();
+		if (!IsValidTarget(TargetActor))
+		{
+			NoValidTarget.Broadcast();
+		}
+		else
+		{
+			ValidTarget.Broadcast(DataHandle);
+		}
 	}
 }
+
 
 void UF1TargetDataValidTarget::OnTargetDataReplicatedCallback(const FGameplayAbilityTargetDataHandle& DataHandle, FGameplayTag ActivationTag)
 {

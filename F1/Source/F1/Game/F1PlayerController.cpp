@@ -1,6 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "Game/F1PlayerController.h"
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
@@ -13,25 +12,61 @@
 #include "GameplayTag/F1GameplayTags.h"
 #include "NavigationPath.h"
 #include "NavigationSystem.h"
+#include "Net/UnrealNetwork.h"
 
 AF1PlayerController::AF1PlayerController()
 {
-	bReplicates = true;
-
+    bReplicates = true;
     Spline = CreateDefaultSubobject<USplineComponent>("Spline");
 }
 
 void AF1PlayerController::PlayerTick(float DeltaTime)
 {
-	Super::PlayerTick(DeltaTime);
+    Super::PlayerTick(DeltaTime);
 
-    if (GetWorld()->GetTimeSeconds() - LastCursorTraceTime >= CursorTraceInterval)
+    if (IsLocalPlayerController())
     {
-        CursorTrace();
-        LastCursorTraceTime = GetWorld()->GetTimeSeconds();
-    }
+        if (GetWorld()->GetTimeSeconds() - LastCursorTraceTime >= CursorTraceInterval)
+        {
+            CursorTrace();
+            LastCursorTraceTime = GetWorld()->GetTimeSeconds();
+        }
 
-    AutoRun();
+        AutoRun();
+    }
+}
+
+void AF1PlayerController::BeginPlay()
+{
+    Super::BeginPlay();
+    check(F1Context);
+
+    UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer());
+    if (Subsystem) Subsystem->AddMappingContext(F1Context, 0);
+
+    bShowMouseCursor = true;
+    DefaultMouseCursor = EMouseCursor::Default;
+
+    FInputModeGameAndUI InputModeData;
+    InputModeData.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+    InputModeData.SetHideCursorDuringCapture(false);
+    SetInputMode(InputModeData);
+}
+
+void AF1PlayerController::SetupInputComponent()
+{
+    Super::SetupInputComponent();
+
+    UF1InputComponent* F1InputComponent = CastChecked<UF1InputComponent>(InputComponent);
+    F1InputComponent->BindAbilityActions(InputConfig, this, &ThisClass::AbilityInputTagPressed, &ThisClass::AbilityInputTagReleased, &ThisClass::AbilityInputTagHeld);
+}
+
+void AF1PlayerController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+    DOREPLIFETIME(AF1PlayerController, bAutoRunning);
+    DOREPLIFETIME(AF1PlayerController, CachedDestination);
 }
 
 ETeamAttitude::Type AF1PlayerController::GetTeamAttitudeTowards(const AActor* Actor) const
@@ -45,7 +80,6 @@ ETeamAttitude::Type AF1PlayerController::GetTeamAttitudeTowards(const AActor* Ac
     if (!MyTeam || !TargetTeam) return ETeamAttitude::Neutral;
 
     return FGenericTeamId::GetAttitude(MyTeam->GetGenericTeamId(), TargetTeam->GetGenericTeamId());
-
 }
 
 void AF1PlayerController::StartMovementToDestination()
@@ -53,17 +87,25 @@ void AF1PlayerController::StartMovementToDestination()
     const APawn* ControlledPawn = GetPawn();
     if (!ControlledPawn) return;
 
+    const FVector StartLocation = ControlledPawn->GetActorLocation();
+
     if (UNavigationPath* NavPath = UNavigationSystemV1::FindPathToLocationSynchronously(
-        this, ControlledPawn->GetActorLocation(), CachedDestination))
+        this, StartLocation, CachedDestination))
     {
         if (NavPath->PathPoints.Num() > 0)
         {
             Spline->ClearSplinePoints();
-            for (const FVector& PointLoc : NavPath->PathPoints)
+
+            const float CharacterZ = StartLocation.Z;
+            for (int32 i = 0; i < NavPath->PathPoints.Num(); i++)
             {
+                FVector PointLoc = NavPath->PathPoints[i];
+                PointLoc.Z = CharacterZ;
                 Spline->AddSplinePoint(PointLoc, ESplineCoordinateSpace::World);
             }
+
             CachedDestination = NavPath->PathPoints.Last();
+            CachedDestination.Z = CharacterZ;
             bAutoRunning = true;
         }
     }
@@ -75,47 +117,23 @@ void AF1PlayerController::StartAbilityMovementToDestination(const FVector& Desti
     StartMovementToDestination();
 }
 
-void AF1PlayerController::BeginPlay()
-{
-	Super::BeginPlay();
-	check(F1Context);
-
-	UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer());
-	if (Subsystem) Subsystem->AddMappingContext(F1Context, 0);
-
-	bShowMouseCursor = true;
-	DefaultMouseCursor = EMouseCursor::Default;
-
-	FInputModeGameAndUI InputModeData;
-	InputModeData.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-	InputModeData.SetHideCursorDuringCapture(false);
-	SetInputMode(InputModeData);
-}
-
-void AF1PlayerController::SetupInputComponent()
-{
-	Super::SetupInputComponent();
-
-    UF1InputComponent* F1InputComponent = CastChecked<UF1InputComponent>(InputComponent);
-    F1InputComponent->BindAbilityActions(InputConfig, this, &ThisClass::AbilityInputTagPressed, &ThisClass::AbilityInputTagReleased, &ThisClass::AbilityInputTagHeld);
-}
-
 void AF1PlayerController::AutoRun()
 {
     if (!bAutoRunning) return;
+
     if (APawn* ControlledPawn = GetPawn())
     {
-        const FVector LocationOnSpline = Spline->FindLocationClosestToWorldLocation(ControlledPawn->GetActorLocation(), ESplineCoordinateSpace::World);
-        const FVector Direction = Spline->FindDirectionClosestToWorldLocation(LocationOnSpline, ESplineCoordinateSpace::World);
+        const FVector CurrentLocation = ControlledPawn->GetActorLocation();
+        FVector Direction = (CachedDestination - CurrentLocation).GetSafeNormal();
+        Direction.Z = 0;
+
         ControlledPawn->AddMovementInput(Direction);
 
-        const float DistanceToDestination = (LocationOnSpline - CachedDestination).Length();
+        const float DistanceToDestination = FVector::Dist2D(CurrentLocation, CachedDestination);
+
         if (DistanceToDestination <= AutoRunAcceptanceRadius)
         {
             bAutoRunning = false;
-
-            // 자동 이동 완료 델리게이트 호출
-            OnAutoRunCompleted.Broadcast();
         }
     }
 }
@@ -124,10 +142,7 @@ void AF1PlayerController::CursorTrace()
 {
     GetHitResultUnderCursor(ECC_Visibility, false, CursorHit);
 
-    if (!CursorHit.bBlockingHit)
-    {
-        return;
-    }
+    if (!CursorHit.bBlockingHit) return;
 
     AActor* HitActor = CursorHit.GetActor();
     LastActor = ThisActor;
@@ -135,7 +150,8 @@ void AF1PlayerController::CursorTrace()
 
     if (HitActor)
     {
-        if (AF1CharacterBase* HitCharacter = Cast<AF1CharacterBase>(HitActor)) ThisActor = HitCharacter;
+        if (AF1CharacterBase* HitCharacter = Cast<AF1CharacterBase>(HitActor))
+            ThisActor = HitCharacter;
     }
 
     if (LastActor != ThisActor)
@@ -147,7 +163,8 @@ void AF1PlayerController::CursorTrace()
 
 UF1AbilitySystemComponent* AF1PlayerController::GetASC()
 {
-    if (F1AbilitySystemComponent == nullptr) F1AbilitySystemComponent = Cast<UF1AbilitySystemComponent>(UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetPawn<APawn>()));
+    if (F1AbilitySystemComponent == nullptr)
+        F1AbilitySystemComponent = Cast<UF1AbilitySystemComponent>(UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetPawn<APawn>()));
     return F1AbilitySystemComponent;
 }
 
@@ -169,10 +186,7 @@ void AF1PlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
 
 void AF1PlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
 {
-    if (!InputTag.MatchesTagExact(FF1GameplayTags::Get().InputTag_RMB))
-    {
-        return;
-    }
+    if (!InputTag.MatchesTagExact(FF1GameplayTags::Get().InputTag_RMB)) return;
 
     if (bTargeting)
     {
@@ -180,8 +194,9 @@ void AF1PlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
     }
     else
     {
-        FollowTime += GetWorld()->GetDeltaSeconds();
+        if (bAutoRunning) bAutoRunning = false;
 
+        FollowTime += GetWorld()->GetDeltaSeconds();
         if (CursorHit.bBlockingHit) CachedDestination = CursorHit.ImpactPoint;
 
         if (APawn* ControlledPawn = GetPawn())
@@ -230,6 +245,5 @@ void AF1PlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 bool AF1PlayerController::IsEnemy(const AActor* Actor) const
 {
     ETeamAttitude::Type Attitude = GetTeamAttitudeTowards(Actor);
-
     return Attitude == ETeamAttitude::Hostile || Attitude == ETeamAttitude::Neutral;
 }

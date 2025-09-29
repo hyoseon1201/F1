@@ -7,10 +7,20 @@
 void UF1ProjectileSpell::SpawnProjectile(const FVector& ProjectileTargetLocation)
 {
 	const bool bIsServer = GetAvatarActorFromActorInfo()->HasAuthority();
-	if (!bIsServer) return;
+	UE_LOG(LogTemp, Warning, TEXT("[ProjectileSpell] SpawnProjectile called - HasAuthority: %s, Location: %s"),
+		bIsServer ? TEXT("TRUE") : TEXT("FALSE"), *ProjectileTargetLocation.ToString());
+
+	if (!bIsServer)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[ProjectileSpell] SpawnProjectile failed - No server authority"));
+		return;
+	}
 
 	const FVector SocketLocation = GetProjectileSpawnLocation();
 	const FRotator Rotation = GetProjectileRotation(ProjectileTargetLocation);
+
+	UE_LOG(LogTemp, Warning, TEXT("[ProjectileSpell] Spawning projectile at: %s, targeting: %s"),
+		*SocketLocation.ToString(), *ProjectileTargetLocation.ToString());
 
 	FTransform SpawnTransform;
 	SpawnTransform.SetLocation(SocketLocation);

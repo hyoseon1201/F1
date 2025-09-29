@@ -8,8 +8,6 @@
 #include "GenericTeamAgentInterface.h"
 #include "F1PlayerController.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAutoRunCompleted);
-
 class IF1TeamOutlineInterface;
 class AF1CharacterBase;
 class UF1InputConfig;
@@ -17,18 +15,15 @@ class UF1AbilitySystemComponent;
 class USplineComponent;
 
 /**
- * 
+ *
  */
 UCLASS()
 class F1_API AF1PlayerController : public APlayerController
 {
 	GENERATED_BODY()
-	
+
 public:
 	AF1PlayerController();
-
-	UPROPERTY(BlueprintAssignable)
-	FOnAutoRunCompleted OnAutoRunCompleted;
 
 	UFUNCTION(BlueprintCallable)
 	void StartAbilityMovementToDestination(const FVector& Destination);
@@ -40,6 +35,11 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Movement")
 	void StartMovementToDestination();
+
+	UFUNCTION(BlueprintCallable)
+	bool IsAutoRunning() const { return bAutoRunning; }
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 protected:
 	virtual void BeginPlay() override;
@@ -55,9 +55,12 @@ private:
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<USplineComponent> Spline;
 
+	UPROPERTY(Replicated)
 	FVector CachedDestination = FVector::ZeroVector;
 	float FollowTime = 0.f;
 	float ShortPressThreshold = 0.5f;
+
+	UPROPERTY(Replicated)
 	bool bAutoRunning = false;
 	bool bTargeting = false;
 
