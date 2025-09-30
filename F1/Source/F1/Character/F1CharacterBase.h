@@ -101,7 +101,6 @@ protected:
     void InitializeDefaultAttributes();
     void AddCharacterAbilities();
 
-private:
     UPROPERTY(EditAnywhere, Category = "Abilities")
     TArray<TSubclassOf<UGameplayAbility>> StartupAbilities;
 };

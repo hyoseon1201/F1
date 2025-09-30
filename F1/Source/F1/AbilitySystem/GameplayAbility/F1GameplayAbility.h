@@ -14,4 +14,8 @@ class F1_API UF1GameplayAbility : public UGameplayAbility
 {
 	GENERATED_BODY()
 	
+public:
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	FGameplayTag StartupInputTag;
 };

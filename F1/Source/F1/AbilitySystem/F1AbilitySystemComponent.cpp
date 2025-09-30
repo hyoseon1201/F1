@@ -14,7 +14,11 @@ void UF1AbilitySystemComponent::AddCharacterAbilities(const TArray<TSubclassOf<U
 	for (const TSubclassOf<UGameplayAbility> AbilityClass : StartupAbilities)
 	{
 		FGameplayAbilitySpec AbilitySpec = FGameplayAbilitySpec(AbilityClass, 1);
-		GiveAbilityAndActivateOnce(AbilitySpec);
+		if (const UF1GameplayAbility* F1Ability = Cast<UF1GameplayAbility>(AbilitySpec.Ability))
+		{
+			AbilitySpec.DynamicAbilityTags.AddTag(F1Ability->StartupInputTag);
+			GiveAbility(AbilitySpec);
+		}
 	}
 }
 
@@ -34,6 +38,7 @@ void UF1AbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& Input
 		}
 	}
 }
+
 
 void UF1AbilitySystemComponent::AbilityInputTagHeld(const FGameplayTag& InputTag)
 {

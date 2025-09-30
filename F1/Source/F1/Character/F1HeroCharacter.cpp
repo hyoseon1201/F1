@@ -76,6 +76,7 @@ void AF1HeroCharacter::SetCharacterClass(FName CharacterRowName)
     CurrentCharacterInfo = *ClassInfo;
     DefaultAttributes = CurrentCharacterInfo.DefaultAttributes;
     GrowthAttributes = CurrentCharacterInfo.GrowthAttributes;
+    StartupAbilities = CurrentCharacterInfo.StartupAbilities;
 
     UpdateCombatSocketsFromCharacterInfo();
 

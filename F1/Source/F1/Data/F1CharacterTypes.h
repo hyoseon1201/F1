@@ -10,6 +10,7 @@ class UGameplayEffect;
 class USkeletalMesh;
 class UAnimInstance;
 class UTexture2D;
+class UGameplayAbility;
 
 UENUM(BlueprintType)
 enum class EAttackType : uint8
@@ -66,6 +67,9 @@ struct F1_API FCharacterClassInfo : public FTableRowBase
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Attributes")
     TSubclassOf<UGameplayEffect> GrowthAttributes;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Start Abilities")
+    TArray<TSubclassOf<UGameplayAbility>> StartupAbilities;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Combat")
     EAttackType AttackType = EAttackType::Melee;
