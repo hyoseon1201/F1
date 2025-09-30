@@ -32,7 +32,8 @@ public class F1 : ModuleRules
             "Slate",
             "SlateCore",
             "AIModule",
-            "NavigationSystem"
+            "NavigationSystem",
+			"Niagara"
         });
 
         PrivateDependencyModuleNames.AddRange(new string[] {  });

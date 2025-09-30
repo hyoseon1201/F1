@@ -2,7 +2,7 @@
 
 
 #include "AbilitySystem/F1AbilitySystemComponent.h"
-#include "Ability/F1GameplayAbility.h"
+#include "AbilitySystem/GameplayAbility/F1GameplayAbility.h"
 
 void UF1AbilitySystemComponent::AbilityActorInfoSet()
 {
@@ -14,11 +14,7 @@ void UF1AbilitySystemComponent::AddCharacterAbilities(const TArray<TSubclassOf<U
 	for (const TSubclassOf<UGameplayAbility> AbilityClass : StartupAbilities)
 	{
 		FGameplayAbilitySpec AbilitySpec = FGameplayAbilitySpec(AbilityClass, 1);
-		if (const UF1GameplayAbility* F1Ability = Cast<UF1GameplayAbility>(AbilitySpec.Ability))
-		{
-			AbilitySpec.DynamicAbilityTags.AddTag(F1Ability->StartupInputTag);
-			GiveAbility(AbilitySpec);
-		}
+		GiveAbilityAndActivateOnce(AbilitySpec);
 	}
 }
 
