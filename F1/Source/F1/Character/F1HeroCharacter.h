@@ -35,9 +35,6 @@ protected:
 	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_CurrentCharacterInfo, Category = "Character")
 	FCharacterClassInfo CurrentCharacterInfo;
 
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Attributes")
-	TSubclassOf<UGameplayEffect> GrowthAttributes;
-
 	UFUNCTION()
 	void OnRep_CurrentCharacterInfo();
 

@@ -22,4 +22,10 @@ void AF1MonsterCharacter::InitAbilityActorInfo()
 {
 	AbilitySystemComponent->InitAbilityActorInfo(this, this);
 	Cast<UF1AbilitySystemComponent>(AbilitySystemComponent)->AbilityActorInfoSet();
+
+	if (HasAuthority())
+	{
+		InitializeDefaultAttributes();
+		AddCharacterAbilities();
+	}
 }

@@ -95,8 +95,11 @@ protected:
     UPROPERTY()
     TObjectPtr<UAttributeSet> AttributeSet;
 
-    UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Attributes")
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Attributes")
     TSubclassOf<UGameplayEffect> DefaultAttributes;
+
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Attributes")
+    TSubclassOf<UGameplayEffect> GrowthAttributes;
 
     void InitializeDefaultAttributes();
     void AddCharacterAbilities();

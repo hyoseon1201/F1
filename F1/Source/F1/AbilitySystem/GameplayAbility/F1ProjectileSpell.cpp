@@ -5,6 +5,8 @@
 #include "Interaction/F1CombatInterface.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "AbilitySystem/Actor/F1Projectile.h"
+#include "AbilitySystemBlueprintLibrary.h"
+#include "AbilitySystemComponent.h"
 
 void UF1ProjectileSpell::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
@@ -30,12 +32,19 @@ void UF1ProjectileSpell::SpawnProjectile(const FVector& ProjectileTargetLocation
 		AF1Projectile* Projectile = GetWorld()->SpawnActorDeferred<AF1Projectile>(
 			ProjectileClass,
 			SpawnTransform,
-			GetOwningActorFromActorInfo(),
-			Cast<APawn>(GetOwningActorFromActorInfo()),
+			nullptr,
+			nullptr,
 			ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 
-		//TODO: Give the Projectile a Gameplay Effect Spec for causing Damage.
+		if (Projectile)
+		{
+			Projectile->SetOwner(Cast<AActor>(GetAvatarActorFromActorInfo()));
 
-		Projectile->FinishSpawning(SpawnTransform);
+			const UAbilitySystemComponent* SourceASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetAvatarActorFromActorInfo());
+			const FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(DamageEffectClass, GetAbilityLevel(), SourceASC->MakeEffectContext());
+			Projectile->DamageEffectSpecHandle = SpecHandle;
+
+			Projectile->FinishSpawning(SpawnTransform);
+		}
 	}
 }

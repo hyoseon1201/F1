@@ -6,6 +6,7 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystem/F1AbilitySystemComponent.h"
 #include "AbilitySystem/F1AttributeSet.h"
+#include "F1.h"
 
 AF1CharacterBase::AF1CharacterBase()
 {
@@ -14,9 +15,11 @@ AF1CharacterBase::AF1CharacterBase()
     GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
     GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECR_Block);
     GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+    GetCapsuleComponent()->SetGenerateOverlapEvents(false);
 
     GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     GetMesh()->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+    GetMesh()->SetCollisionResponseToChannel(ECC_Projectile, ECR_Overlap);
 
     // ±âº» ÆÀ ¼³Á¤
     TeamID = FGenericTeamId(0);
@@ -45,7 +48,6 @@ void AF1CharacterBase::HighlightActor()
 
     GetMesh()->SetRenderCustomDepth(true);
 
-    // ÆÀº° Stencil Value ¼³Á¤ (1=Enemy Red, 2=Ally Blue)
     uint8 StencilValue = IsEnemyToPlayer() ? 1 : 2;
     GetMesh()->SetCustomDepthStencilValue(StencilValue);
 }
