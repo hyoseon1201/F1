@@ -3,7 +3,6 @@
 #include "Game/F1PlayerController.h"
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
-#include "Interaction/F1TeamOutlineInterface.h"
 #include "Character/F1CharacterBase.h"
 #include "Input/F1InputComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
@@ -26,12 +25,7 @@ void AF1PlayerController::PlayerTick(float DeltaTime)
 
     if (IsLocalPlayerController())
     {
-        if (GetWorld()->GetTimeSeconds() - LastCursorTraceTime >= CursorTraceInterval)
-        {
-            CursorTrace();
-            LastCursorTraceTime = GetWorld()->GetTimeSeconds();
-        }
-
+        CursorTrace(); // Aura 방식: 매 틱마다 커서 트레이스
         AutoRun();
     }
 }
@@ -69,19 +63,6 @@ void AF1PlayerController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
     DOREPLIFETIME(AF1PlayerController, CachedDestination);
 }
 
-ETeamAttitude::Type AF1PlayerController::GetTeamAttitudeTowards(const AActor* Actor) const
-{
-    const APawn* MyPawn = GetPawn();
-    if (!MyPawn || !Actor) return ETeamAttitude::Neutral;
-
-    const IGenericTeamAgentInterface* MyTeam = Cast<IGenericTeamAgentInterface>(MyPawn);
-    const IGenericTeamAgentInterface* TargetTeam = Cast<IGenericTeamAgentInterface>(Actor);
-
-    if (!MyTeam || !TargetTeam) return ETeamAttitude::Neutral;
-
-    return FGenericTeamId::GetAttitude(MyTeam->GetGenericTeamId(), TargetTeam->GetGenericTeamId());
-}
-
 void AF1PlayerController::StartMovementToDestination()
 {
     const APawn* ControlledPawn = GetPawn();
@@ -96,17 +77,16 @@ void AF1PlayerController::StartMovementToDestination()
         {
             Spline->ClearSplinePoints();
 
-            const float CharacterZ = StartLocation.Z;
-            for (int32 i = 0; i < NavPath->PathPoints.Num(); i++)
+            for (const FVector& PointLoc : NavPath->PathPoints)
             {
-                FVector PointLoc = NavPath->PathPoints[i];
-                PointLoc.Z = CharacterZ;
                 Spline->AddSplinePoint(PointLoc, ESplineCoordinateSpace::World);
             }
 
-            CachedDestination = NavPath->PathPoints.Last();
-            CachedDestination.Z = CharacterZ;
-            bAutoRunning = true;
+            if (NavPath->PathPoints.Num() > 0)
+            {
+                CachedDestination = NavPath->PathPoints.Last();
+                bAutoRunning = true;
+            }
         }
     }
 }
@@ -123,14 +103,15 @@ void AF1PlayerController::AutoRun()
 
     if (APawn* ControlledPawn = GetPawn())
     {
-        const FVector CurrentLocation = ControlledPawn->GetActorLocation();
-        FVector Direction = (CachedDestination - CurrentLocation).GetSafeNormal();
-        Direction.Z = 0;
+        // Aura 방식: Spline 경로 기반 이동
+        const FVector LocationOnSpline = Spline->FindLocationClosestToWorldLocation(
+            ControlledPawn->GetActorLocation(), ESplineCoordinateSpace::World);
+        const FVector Direction = Spline->FindDirectionClosestToWorldLocation(
+            LocationOnSpline, ESplineCoordinateSpace::World);
 
         ControlledPawn->AddMovementInput(Direction);
 
-        const float DistanceToDestination = FVector::Dist2D(CurrentLocation, CachedDestination);
-
+        const float DistanceToDestination = (LocationOnSpline - CachedDestination).Length();
         if (DistanceToDestination <= AutoRunAcceptanceRadius)
         {
             bAutoRunning = false;
@@ -141,19 +122,20 @@ void AF1PlayerController::AutoRun()
 void AF1PlayerController::CursorTrace()
 {
     GetHitResultUnderCursor(ECC_Visibility, false, CursorHit);
-
     if (!CursorHit.bBlockingHit) return;
 
-    AActor* HitActor = CursorHit.GetActor();
     LastActor = ThisActor;
     ThisActor = nullptr;
 
-    if (HitActor)
+    if (AActor* HitActor = CursorHit.GetActor())
     {
         if (AF1CharacterBase* HitCharacter = Cast<AF1CharacterBase>(HitActor))
+        {
             ThisActor = HitCharacter;
+        }
     }
 
+    // 하이라이트 처리
     if (LastActor != ThisActor)
     {
         if (LastActor) LastActor->UnHighlightActor();
@@ -164,86 +146,78 @@ void AF1PlayerController::CursorTrace()
 UF1AbilitySystemComponent* AF1PlayerController::GetASC()
 {
     if (F1AbilitySystemComponent == nullptr)
-        F1AbilitySystemComponent = Cast<UF1AbilitySystemComponent>(UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetPawn<APawn>()));
+    {
+        F1AbilitySystemComponent = Cast<UF1AbilitySystemComponent>(
+            UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetPawn<APawn>()));
+    }
     return F1AbilitySystemComponent;
 }
 
 void AF1PlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
 {
-    if (InputTag.MatchesTagExact(FF1GameplayTags::Get().InputTag_RMB))
+    // RMB가 아닌 다른 입력은 AbilitySystem으로 전달
+    if (!InputTag.MatchesTagExact(FF1GameplayTags::Get().InputTag_RMB))
     {
-        bTargeting = ThisActor ? true : false;
-        bAutoRunning = false;
+        if (GetASC()) GetASC()->AbilityInputTagPressed(InputTag);
+        return;
     }
-    else
-    {
-        if (GetASC())
-        {
-            GetASC()->AbilityInputTagPressed(InputTag);
-        }
-    }
+
+    // RMB Pressed: 자동 이동 중지
+    bAutoRunning = false;
 }
 
 void AF1PlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
 {
-    if (!InputTag.MatchesTagExact(FF1GameplayTags::Get().InputTag_RMB)) return;
-
-    if (bTargeting)
+    // RMB가 아닌 다른 입력은 AbilitySystem으로 전달
+    if (!InputTag.MatchesTagExact(FF1GameplayTags::Get().InputTag_RMB))
     {
         if (GetASC()) GetASC()->AbilityInputTagHeld(InputTag);
+        return;
     }
-    else
+
+    // RMB Held: 드래그 이동
+    FollowTime += GetWorld()->GetDeltaSeconds();
+
+    if (CursorHit.bBlockingHit)
     {
-        if (bAutoRunning) bAutoRunning = false;
+        CachedDestination = CursorHit.ImpactPoint;
+    }
 
-        FollowTime += GetWorld()->GetDeltaSeconds();
-        if (CursorHit.bBlockingHit) CachedDestination = CursorHit.ImpactPoint;
-
-        if (APawn* ControlledPawn = GetPawn())
-        {
-            const FVector WorldDirection = (CachedDestination - ControlledPawn->GetActorLocation()).GetSafeNormal();
-            ControlledPawn->AddMovementInput(WorldDirection);
-        }
+    if (APawn* ControlledPawn = GetPawn())
+    {
+        const FVector WorldDirection = (CachedDestination - ControlledPawn->GetActorLocation()).GetSafeNormal();
+        ControlledPawn->AddMovementInput(WorldDirection);
     }
 }
 
 void AF1PlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 {
+    // RMB가 아닌 다른 입력은 AbilitySystem으로 전달
     if (!InputTag.MatchesTagExact(FF1GameplayTags::Get().InputTag_RMB))
     {
         if (GetASC()) GetASC()->AbilityInputTagReleased(InputTag);
         return;
     }
 
-    if (bTargeting && ThisActor)
+    // 짧은 클릭인 경우에만 이동 명령 실행
+    if (FollowTime <= ShortPressThreshold)
     {
-        if (IsEnemy(ThisActor))
-        {
-            // 적군/중립 → 공격
-        }
-        else
-        {
-            // 아군 → 이동
-            CachedDestination = ThisActor->GetActorLocation();
-            StartMovementToDestination();
-        }
-    }
-    else
-    {
-        // 빈 땅 클릭 → 이동
         const APawn* ControlledPawn = GetPawn();
-        if (FollowTime <= ShortPressThreshold && ControlledPawn)
+        if (ControlledPawn)
         {
+            // 커서 아래에 액터가 있으면 그 위치로, 없으면 땅 위치로 이동
+            if (ThisActor)
+            {
+                CachedDestination = ThisActor->GetActorLocation();
+            }
+            else
+            {
+                CachedDestination = CursorHit.ImpactPoint;
+            }
+
             StartMovementToDestination();
         }
     }
 
     FollowTime = 0.f;
-    bTargeting = false;
-}
-
-bool AF1PlayerController::IsEnemy(const AActor* Actor) const
-{
-    ETeamAttitude::Type Attitude = GetTeamAttitudeTowards(Actor);
-    return Attitude == ETeamAttitude::Hostile || Attitude == ETeamAttitude::Neutral;
 }

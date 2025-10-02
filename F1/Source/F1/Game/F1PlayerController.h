@@ -5,18 +5,13 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
 #include "GameplayTagContainer.h"
-#include "GenericTeamAgentInterface.h"
 #include "F1PlayerController.generated.h"
 
-class IF1TeamOutlineInterface;
 class AF1CharacterBase;
 class UF1InputConfig;
 class UF1AbilitySystemComponent;
 class USplineComponent;
 
-/**
- *
- */
 UCLASS()
 class F1_API AF1PlayerController : public APlayerController
 {
@@ -29,9 +24,6 @@ public:
 	void StartAbilityMovementToDestination(const FVector& Destination);
 
 	virtual void PlayerTick(float DeltaTime) override;
-
-	UFUNCTION(BlueprintCallable, Category = "Team")
-	ETeamAttitude::Type GetTeamAttitudeTowards(const AActor* Actor) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Movement")
 	void StartMovementToDestination();
@@ -57,27 +49,24 @@ private:
 
 	UPROPERTY(Replicated)
 	FVector CachedDestination = FVector::ZeroVector;
+
 	float FollowTime = 0.f;
 	float ShortPressThreshold = 0.5f;
 
 	UPROPERTY(Replicated)
 	bool bAutoRunning = false;
-	bool bTargeting = false;
 
 	void AutoRun();
 
 	// ===========================================
-	// Outlining
+	// Cursor Trace
 	// ===========================================
 private:
 	void CursorTrace();
 
-	AF1CharacterBase* LastActor;
-	AF1CharacterBase* ThisActor;
+	AF1CharacterBase* LastActor = nullptr;
+	AF1CharacterBase* ThisActor = nullptr;
 	FHitResult CursorHit;
-
-	float CursorTraceInterval = 0.1f;
-	float LastCursorTraceTime = 0.0f;
 
 	// ===========================================
 	// Input
@@ -94,10 +83,4 @@ private:
 	void AbilityInputTagPressed(FGameplayTag InputTag);
 	void AbilityInputTagHeld(FGameplayTag InputTag);
 	void AbilityInputTagReleased(FGameplayTag InputTag);
-
-	// ===========================================
-	// Combat
-	// ===========================================
-private:
-	bool IsEnemy(const AActor* Actor) const;
 };

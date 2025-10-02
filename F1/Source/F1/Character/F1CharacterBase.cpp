@@ -6,6 +6,7 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystem/F1AbilitySystemComponent.h"
 #include "AbilitySystem/F1AttributeSet.h"
+#include "Components/WidgetComponent.h"
 #include "F1.h"
 
 AF1CharacterBase::AF1CharacterBase()
@@ -23,6 +24,9 @@ AF1CharacterBase::AF1CharacterBase()
 
     // ±âº» ÆÀ ¼³Á¤
     TeamID = FGenericTeamId(0);
+
+    HealthBar = CreateDefaultSubobject<UWidgetComponent>("HealthBar");
+    HealthBar->SetupAttachment(GetRootComponent());
 }
 
 void AF1CharacterBase::BeginPlay()

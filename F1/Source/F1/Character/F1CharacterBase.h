@@ -11,6 +11,7 @@ class UAbilitySystemComponent;
 class UAttributeSet;
 class UGameplayEffect;
 class UGameplayAbility;
+class UWidgetComponent;
 
 UCLASS()
 class F1_API AF1CharacterBase : public ACharacter,
@@ -106,4 +107,11 @@ protected:
 
     UPROPERTY(EditAnywhere, Category = "Abilities")
     TArray<TSubclassOf<UGameplayAbility>> StartupAbilities;
+
+    // ===========================================
+    // Wolrd Widget
+    // ===========================================
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+    TObjectPtr<UWidgetComponent> HealthBar;
 };

@@ -6,6 +6,8 @@
 #include "Character/F1CharacterBase.h"
 #include "F1MonsterCharacter.generated.h"
 
+class UWidgetComponent;
+
 /**
  * 
  */
