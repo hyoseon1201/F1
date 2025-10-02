@@ -1,6 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "AbilitySystem/Actor/F1Projectile.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
@@ -11,6 +10,7 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
 #include "GenericTeamAgentInterface.h"
+#include "AbilitySystem/F1AttributeSet.h"
 
 AF1Projectile::AF1Projectile()
 {
@@ -25,6 +25,7 @@ AF1Projectile::AF1Projectile()
 	Sphere->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Overlap);
 	Sphere->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Overlap);
 	Sphere->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+	Sphere->SetGenerateOverlapEvents(true);
 
 	ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>("ProjectileMovement");
 	ProjectileMovement->InitialSpeed = 550.f;
@@ -35,10 +36,13 @@ AF1Projectile::AF1Projectile()
 void AF1Projectile::BeginPlay()
 {
 	Super::BeginPlay();
-	SetLifeSpan(LifeSpan);
-	Sphere->OnComponentBeginOverlap.AddDynamic(this, &AF1Projectile::OnSphereOverlap);
 
-	ECollisionChannel MyObjectType = Sphere->GetCollisionObjectType();
+	SetLifeSpan(LifeSpan);
+
+	if (Sphere)
+	{
+		Sphere->OnComponentBeginOverlap.AddDynamic(this, &AF1Projectile::OnSphereOverlap);
+	}
 }
 
 void AF1Projectile::Destroyed()
@@ -50,33 +54,40 @@ void AF1Projectile::Destroyed()
 	Super::Destroyed();
 }
 
-void AF1Projectile::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+void AF1Projectile::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (!HasAuthority())
+	if (!HasAuthority()) return;
+
+	AActor* ProjectileOwner = GetOwner();
+	if (!ProjectileOwner) return;
+
+	// 팀 체크
+	IGenericTeamAgentInterface* SourceTeamAgent = Cast<IGenericTeamAgentInterface>(ProjectileOwner);
+	IGenericTeamAgentInterface* TargetTeamAgent = Cast<IGenericTeamAgentInterface>(OtherActor);
+
+	if (SourceTeamAgent && TargetTeamAgent)
 	{
-		return;
+		if (SourceTeamAgent->GetGenericTeamId() == TargetTeamAgent->GetGenericTeamId())
+		{
+			return; // 같은 팀
+		}
 	}
 
-    IGenericTeamAgentInterface* SourceTeamAgent = Cast<IGenericTeamAgentInterface>(GetOwner());
-    IGenericTeamAgentInterface* TargetTeamAgent = Cast<IGenericTeamAgentInterface>(OtherActor);
+	// Impact Effect
+	if (ImpactEffect)
+	{
+		UGameplayStatics::SpawnEmitterAtLocation(this, ImpactEffect, GetActorLocation());
+	}
 
-    if (SourceTeamAgent && TargetTeamAgent)
-    {
-        FGenericTeamId SourceTeam = SourceTeamAgent->GetGenericTeamId();
-        FGenericTeamId TargetTeam = TargetTeamAgent->GetGenericTeamId();
+	// 데미지 적용
+	if (UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OtherActor))
+	{
+		if (DamageEffectSpecHandle.Data.IsValid())
+		{
+			TargetASC->ApplyGameplayEffectSpecToSelf(*DamageEffectSpecHandle.Data.Get());
+		}
+	}
 
-        if (SourceTeam == TargetTeam)
-        {
-            return;
-        }
-    }
-
-    UGameplayStatics::SpawnEmitterAtLocation(this, ImpactEffect, GetActorLocation());
-
-    if (UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OtherActor))
-    {
-        TargetASC->ApplyGameplayEffectSpecToSelf(*DamageEffectSpecHandle.Data.Get());
-    }
-
-    Destroy();
+	Destroy();
 }

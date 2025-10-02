@@ -5,7 +5,6 @@
 #include "GameFramework/Character.h"
 #include "GameplayEffectExtension.h"
 #include "Net/UnrealNetwork.h"
-#include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Character/F1HeroCharacter.h"
 #include "Game/F1PlayerState.h"
@@ -114,7 +113,23 @@ void UF1AttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 void UF1AttributeSet::OnRep_Health(const FGameplayAttributeData& OldHealth) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UF1AttributeSet, Health, OldHealth);
+
+	// ===== 로그 추가 =====
+	UE_LOG(LogTemp, Warning, TEXT("========== OnRep_Health =========="));
+	UE_LOG(LogTemp, Warning, TEXT("Old Health: %.2f"), OldHealth.GetCurrentValue());
+	UE_LOG(LogTemp, Warning, TEXT("New Health: %.2f"), Health.GetCurrentValue());
+
+	if (const UAbilitySystemComponent* ASC = GetOwningAbilitySystemComponent())
+	{
+		if (ASC->AbilityActorInfo.IsValid() && ASC->AbilityActorInfo->AvatarActor.IsValid())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Character: %s"),
+				*ASC->AbilityActorInfo->AvatarActor->GetName());
+		}
+	}
+	UE_LOG(LogTemp, Warning, TEXT("=================================="));
 }
+
 
 void UF1AttributeSet::OnRep_MaxHealth(const FGameplayAttributeData& OldMaxHealth) const
 {

@@ -38,17 +38,22 @@ void AF1HeroCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 
 void AF1HeroCharacter::PossessedBy(AController* NewController)
 {
-	Super::PossessedBy(NewController);
+    Super::PossessedBy(NewController);
 
-	InitAbilityActorInfo();
+    InitAbilityActorInfo();
     AddCharacterAbilities();
+
+    InitializeHealthBarWidget();
+
 }
 
 void AF1HeroCharacter::OnRep_PlayerState()
 {
-	Super::OnRep_PlayerState();
+    Super::OnRep_PlayerState();
 
-	InitAbilityActorInfo();
+    InitAbilityActorInfo();
+
+    InitializeHealthBarWidget();
 }
 
 void AF1HeroCharacter::SetCharacterClass(FName CharacterRowName)
