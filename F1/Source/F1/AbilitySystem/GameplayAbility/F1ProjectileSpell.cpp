@@ -6,6 +6,7 @@
 #include "AbilitySystem/Actor/F1Projectile.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
+#include "GameplayTag/F1GameplayTags.h"
 
 void UF1ProjectileSpell::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 	const FGameplayAbilityActorInfo* ActorInfo,
@@ -37,23 +38,17 @@ void UF1ProjectileSpell::SpawnProjectile(const FVector& ProjectileTargetLocation
 		nullptr,
 		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 
-	if (Projectile)
-	{
-		Projectile->SetOwner(GetAvatarActorFromActorInfo());
+	Projectile->SetOwner(GetAvatarActorFromActorInfo());
+	const UAbilitySystemComponent* SourceASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetAvatarActorFromActorInfo());
+	const FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(
+		DamageEffectClass,
+		GetAbilityLevel(),
+		SourceASC->MakeEffectContext());
 
-		const UAbilitySystemComponent* SourceASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(
-			GetAvatarActorFromActorInfo());
-
-		if (SourceASC)
-		{
-			const FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(
-				DamageEffectClass,
-				GetAbilityLevel(),
-				SourceASC->MakeEffectContext());
-
-			Projectile->DamageEffectSpecHandle = SpecHandle;
-		}
-
-		Projectile->FinishSpawning(SpawnTransform);
-	}
+	FF1GameplayTags GameplayTags = FF1GameplayTags::Get();
+	const float ScaledDamage = Damage.GetValueAtLevel(GetAbilityLevel());
+	GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, FString::Printf(TEXT("EnergyBolt Damage: %f"), ScaledDamage));
+	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, DamageTypeTag, ScaledDamage);
+	Projectile->DamageEffectSpecHandle = SpecHandle;
+	Projectile->FinishSpawning(SpawnTransform);
 }

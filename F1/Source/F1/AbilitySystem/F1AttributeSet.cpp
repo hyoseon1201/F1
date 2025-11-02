@@ -104,6 +104,18 @@ void UF1AttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 	{
 		SetMana(FMath::Clamp(GetMana(), 0.f, GetMaxMana()));
 	}
+	if (Data.EvaluatedData.Attribute == GetIncomingDamageAttribute())
+	{
+		const float LocalIncomingDamage = GetIncomingDamage();
+		SetIncomingDamage(0.f);
+		if (LocalIncomingDamage > 0.f)
+		{
+			const float NewHealth = GetHealth() - LocalIncomingDamage;
+			SetHealth(FMath::Clamp(NewHealth, 0.f, GetMaxHealth()));
+
+			const bool bFatal = NewHealth <= 0.f;
+		}
+	}
 }
 
 // ===========================================
@@ -113,21 +125,6 @@ void UF1AttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 void UF1AttributeSet::OnRep_Health(const FGameplayAttributeData& OldHealth) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UF1AttributeSet, Health, OldHealth);
-
-	// ===== 로그 추가 =====
-	UE_LOG(LogTemp, Warning, TEXT("========== OnRep_Health =========="));
-	UE_LOG(LogTemp, Warning, TEXT("Old Health: %.2f"), OldHealth.GetCurrentValue());
-	UE_LOG(LogTemp, Warning, TEXT("New Health: %.2f"), Health.GetCurrentValue());
-
-	if (const UAbilitySystemComponent* ASC = GetOwningAbilitySystemComponent())
-	{
-		if (ASC->AbilityActorInfo.IsValid() && ASC->AbilityActorInfo->AvatarActor.IsValid())
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Character: %s"),
-				*ASC->AbilityActorInfo->AvatarActor->GetName());
-		}
-	}
-	UE_LOG(LogTemp, Warning, TEXT("=================================="));
 }
 
 

@@ -102,22 +102,11 @@ public:
     FGameplayTag InputTag_6;
 
     // ===========================================
-    // Damage Type Tags
+    // Damage Type Tags (SetByCaller¿ë)
     // ===========================================
     FGameplayTag DamageType_Physical;
     FGameplayTag DamageType_Magical;
     FGameplayTag DamageType_True;
-
-    // ===========================================
-    // Damage Tags (SetByCaller¿ë)
-    // ===========================================
-    FGameplayTag Damage_Basic;
-    FGameplayTag Damage_Skill_Q;
-    FGameplayTag Damage_Skill_W;
-    FGameplayTag Damage_Skill_E;
-    FGameplayTag Damage_Skill_R;
-    FGameplayTag Damage_DOT;
-    FGameplayTag Damage_Execute;
 
 private:
     static FF1GameplayTags GameplayTags;

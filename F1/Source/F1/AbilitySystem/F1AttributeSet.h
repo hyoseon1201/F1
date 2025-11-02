@@ -176,6 +176,13 @@ public:
 	ATTRIBUTE_ACCESSORS(UF1AttributeSet, AttackRange);
 
 	// ===========================================
+	// 메타 정보 (Meta)
+	// ===========================================
+	UPROPERTY(BlueprintReadOnly, Category = "Meta Attributes")
+	FGameplayAttributeData IncomingDamage;
+	ATTRIBUTE_ACCESSORS(UF1AttributeSet, IncomingDamage);
+
+	// ===========================================
 	// 캐릭터 정보 (Character Info)
 	// ===========================================
 	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_CharacterLevel, Category = "Character Info")
