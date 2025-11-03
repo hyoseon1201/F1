@@ -21,4 +21,17 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void InitAbilityActorInfo() override;
+
+	// ===========================================
+	// Combat System
+	// ===========================================
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat")
+	float LifeSpan = 5.f;
+
+	// ===========================================
+	// Combat Interface
+	// ===========================================
+public:
+	virtual void Die() override;
 };

@@ -136,6 +136,12 @@ FVector AF1HeroCharacter::GetCombatSocketLocation()
     return Super::GetCombatSocketLocation();
 }
 
+void AF1HeroCharacter::Die()
+{
+    SetLifeSpan(LifeSpan);
+    Super::Die();
+}
+
 void AF1HeroCharacter::OnRep_CurrentCharacterInfo()
 {
     ApplyVisualsFromCurrentInfo();

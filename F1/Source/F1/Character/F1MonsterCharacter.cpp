@@ -34,3 +34,9 @@ void AF1MonsterCharacter::InitAbilityActorInfo()
 		AddCharacterAbilities();
 	}
 }
+
+void AF1MonsterCharacter::Die()
+{
+	SetLifeSpan(LifeSpan);
+	Super::Die();
+}

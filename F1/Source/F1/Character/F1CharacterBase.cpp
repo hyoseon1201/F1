@@ -170,6 +170,20 @@ FVector AF1CharacterBase::GetCombatSocketLocation()
     return DefaultLocation;
 }
 
+void AF1CharacterBase::Die()
+{
+    MulticastHandleDeath();
+}
+
+void AF1CharacterBase::MulticastHandleDeath_Implementation()
+{
+    GetMesh()->SetSimulatePhysics(true);
+    GetMesh()->SetEnableGravity(true);
+    GetMesh()->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
+    GetMesh()->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
+
+    GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+}
 
 void AF1CharacterBase::UpdateCombatSocketsFromCharacterInfo()
 {

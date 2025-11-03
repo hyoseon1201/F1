@@ -45,6 +45,9 @@ protected:
 	// Combat System
 	// ===========================================
 protected:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat")
+	float LifeSpan = 5.f;
+
 	virtual void UpdateCombatSocketsFromCharacterInfo() override;
 
 private:
@@ -59,4 +62,6 @@ public:
 	virtual void ApplyLevelBasedGrowth() override;
 
 	virtual FVector GetCombatSocketLocation() override;
+
+	virtual void Die() override;
 };

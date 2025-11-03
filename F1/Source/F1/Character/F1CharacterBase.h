@@ -64,6 +64,10 @@ public:
     virtual void ApplyLevelBasedGrowth() override;
 
     virtual FVector GetCombatSocketLocation() override;
+    virtual void Die() override;
+
+    UFUNCTION(NetMulticast, Reliable)
+    virtual void MulticastHandleDeath();
 
     // ===========================================
     // Combat System
@@ -103,11 +107,11 @@ protected:
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Attributes")
     TSubclassOf<UGameplayEffect> GrowthAttributes;
 
-    void InitializeDefaultAttributes();
-    void AddCharacterAbilities();
-
     UPROPERTY(EditAnywhere, Category = "Abilities")
     TArray<TSubclassOf<UGameplayAbility>> StartupAbilities;
+
+    void InitializeDefaultAttributes();
+    void AddCharacterAbilities();
 
     // ===========================================
     // Wolrd Widget
