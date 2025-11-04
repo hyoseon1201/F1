@@ -47,7 +47,6 @@ void UF1ProjectileSpell::SpawnProjectile(const FVector& ProjectileTargetLocation
 
 	FF1GameplayTags GameplayTags = FF1GameplayTags::Get();
 	const float ScaledDamage = Damage.GetValueAtLevel(GetAbilityLevel());
-	GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, FString::Printf(TEXT("EnergyBolt Damage: %f"), ScaledDamage));
 	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, DamageTypeTag, ScaledDamage);
 	Projectile->DamageEffectSpecHandle = SpecHandle;
 	Projectile->FinishSpawning(SpawnTransform);

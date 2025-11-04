@@ -12,6 +12,8 @@
 #include "NavigationPath.h"
 #include "NavigationSystem.h"
 #include "Net/UnrealNetwork.h"
+#include "GameFramework/Character.h"
+#include "UI/Widget/DamageTextComponent.h"
 
 AF1PlayerController::AF1PlayerController()
 {
@@ -158,7 +160,20 @@ void AF1PlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
     // RMB가 아닌 다른 입력은 AbilitySystem으로 전달
     if (!InputTag.MatchesTagExact(FF1GameplayTags::Get().InputTag_RMB))
     {
-        if (GetASC()) GetASC()->AbilityInputTagPressed(InputTag);
+        if (GetASC())
+        {
+            GetASC()->AbilityInputTagPressed(InputTag);
+        }
+
+        if (InputTag.MatchesTagExact(FF1GameplayTags::Get().InputTag_LMB) ||
+            InputTag.MatchesTagExact(FF1GameplayTags::Get().InputTag_Q) ||
+            InputTag.MatchesTagExact(FF1GameplayTags::Get().InputTag_W) ||
+            InputTag.MatchesTagExact(FF1GameplayTags::Get().InputTag_E) ||
+            InputTag.MatchesTagExact(FF1GameplayTags::Get().InputTag_R))
+        {
+            bAutoRunning = false;
+        }
+
         return;
     }
 
@@ -220,4 +235,16 @@ void AF1PlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
     }
 
     FollowTime = 0.f;
+}
+
+void AF1PlayerController::ShowDamageNumber_Implementation(float DamageAmount, ACharacter* TargetCharacter)
+{
+    if (IsValid(TargetCharacter) && DamageTextComponentClass)
+    {
+        UDamageTextComponent* DamageText = NewObject<UDamageTextComponent>(TargetCharacter, DamageTextComponentClass);
+        DamageText->RegisterComponent();
+        DamageText->AttachToComponent(TargetCharacter->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
+        DamageText->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+        DamageText->SetDamageText(DamageAmount);
+    }
 }

@@ -11,6 +11,7 @@ class AF1CharacterBase;
 class UF1InputConfig;
 class UF1AbilitySystemComponent;
 class USplineComponent;
+class UDamageTextComponent;
 
 UCLASS()
 class F1_API AF1PlayerController : public APlayerController
@@ -83,4 +84,15 @@ private:
 	void AbilityInputTagPressed(FGameplayTag InputTag);
 	void AbilityInputTagHeld(FGameplayTag InputTag);
 	void AbilityInputTagReleased(FGameplayTag InputTag);
+
+	// ===========================================
+	// Damage
+	// ===========================================
+public:
+	UFUNCTION(Client, Reliable)
+	void ShowDamageNumber(float DamageAmount, ACharacter* TargetCharacter);
+
+private:
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<UDamageTextComponent> DamageTextComponentClass;
 };
