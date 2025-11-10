@@ -12,7 +12,7 @@
 UCLASS()
 class F1_API UDamageTextComponent : public UWidgetComponent
 {
-	GENERATED_BODY()
+	GENERATED_BODY(Armor)
 	
 public:
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)

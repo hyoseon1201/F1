@@ -13,6 +13,7 @@
 
 UF1AttributeSet::UF1AttributeSet()
 {
+	CriticalStrikeDamage = 0.5f;
 }
 
 void UF1AttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
