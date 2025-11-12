@@ -24,7 +24,7 @@ struct F1PhysicalDamageStatics
 	}
 };
 
-static const F1PhysicalDamageStatics& DamageStatics()
+static const F1PhysicalDamageStatics& PhysicalDamageStatics()
 {
 	static F1PhysicalDamageStatics PDStatics;
 
@@ -33,11 +33,11 @@ static const F1PhysicalDamageStatics& DamageStatics()
 
 UF1ExCalcPhysicalDamage::UF1ExCalcPhysicalDamage()
 {
-	RelevantAttributesToCapture.Add(DamageStatics().ArmorDef);
-	RelevantAttributesToCapture.Add(DamageStatics().ArmorPenetrationFlatDef);
-	RelevantAttributesToCapture.Add(DamageStatics().ArmorPenetrationPercentDef);
-	RelevantAttributesToCapture.Add(DamageStatics().CriticalStrikeChanceDef);
-	RelevantAttributesToCapture.Add(DamageStatics().CriticalStrikeDamageDef);
+	RelevantAttributesToCapture.Add(PhysicalDamageStatics().ArmorDef);
+	RelevantAttributesToCapture.Add(PhysicalDamageStatics().ArmorPenetrationFlatDef);
+	RelevantAttributesToCapture.Add(PhysicalDamageStatics().ArmorPenetrationPercentDef);
+	RelevantAttributesToCapture.Add(PhysicalDamageStatics().CriticalStrikeChanceDef);
+	RelevantAttributesToCapture.Add(PhysicalDamageStatics().CriticalStrikeDamageDef);
 }
 
 void UF1ExCalcPhysicalDamage::Execute_Implementation(const FGameplayEffectCustomExecutionParameters& ExecutionParams, FGameplayEffectCustomExecutionOutput& OutExecutionOutput) const
@@ -66,11 +66,11 @@ void UF1ExCalcPhysicalDamage::Execute_Implementation(const FGameplayEffectCustom
 	float CritChance = 0.f;
 	float CritDamage = 0.f;
 
-	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(DamageStatics().ArmorDef, EvaluationParameters, Armor);
-	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(DamageStatics().ArmorPenetrationFlatDef, EvaluationParameters, ArmorPenFlat);
-	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(DamageStatics().ArmorPenetrationPercentDef, EvaluationParameters, ArmorPenPercent);
-	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(DamageStatics().CriticalStrikeChanceDef, EvaluationParameters, CritChance);
-	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(DamageStatics().CriticalStrikeDamageDef, EvaluationParameters, CritDamage);
+	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(PhysicalDamageStatics().ArmorDef, EvaluationParameters, Armor);
+	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(PhysicalDamageStatics().ArmorPenetrationFlatDef, EvaluationParameters, ArmorPenFlat);
+	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(PhysicalDamageStatics().ArmorPenetrationPercentDef, EvaluationParameters, ArmorPenPercent);
+	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(PhysicalDamageStatics().CriticalStrikeChanceDef, EvaluationParameters, CritChance);
+	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(PhysicalDamageStatics().CriticalStrikeDamageDef, EvaluationParameters, CritDamage);
 
 	// 방어력 계산
 	float ArmorAfterPercent = Armor * (1.f - FMath::Clamp(ArmorPenPercent, 0.f, 1.f));
