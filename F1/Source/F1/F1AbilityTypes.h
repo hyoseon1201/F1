@@ -3,7 +3,7 @@
 #include "GameplayEffectTypes.h"
 #include "F1AbilityTypes.generated.h"
 
-USTURCT(BlueprintType)
+USTRUCT(BlueprintType)
 struct FF1GameplayEffectContext : public FGameplayEffectContext
 {
 	GENERATED_BODY()
@@ -15,12 +15,12 @@ public:
 
 	virtual UScriptStruct* GetScriptStruct() const
 	{
-		return FGameplayEffectContext::StaticStruct();
+		return StaticStruct();
 	}
 
-	virtual FGameplayEffectContext* Duplicate() const
+	virtual FF1GameplayEffectContext* Duplicate() const
 	{
-		FGameplayEffectContext* NewContext = new FGameplayEffectContext();
+		FF1GameplayEffectContext* NewContext = new FF1GameplayEffectContext();
 		*NewContext = *this;
 		if (GetHitResult())
 		{
@@ -38,7 +38,7 @@ protected:
 };
 
 template<>
-struct TStructOpsTypeTraits<FAuraGameplayEffectContext> : public TStructOpsTypeTraitsBase2<FAuraGameplayEffectContext>
+struct TStructOpsTypeTraits<FF1GameplayEffectContext> : public TStructOpsTypeTraitsBase2<FF1GameplayEffectContext>
 {
 	enum
 	{

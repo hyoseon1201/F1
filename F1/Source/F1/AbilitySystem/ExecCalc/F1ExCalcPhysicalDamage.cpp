@@ -5,6 +5,7 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystem/F1AttributeSet.h"
 #include "GameplayTag/F1GameplayTags.h"
+#include <F1AbilityTypes.h>
 
 struct F1PhysicalDamageStatics
 {
@@ -80,6 +81,12 @@ void UF1ExCalcPhysicalDamage::Execute_Implementation(const FGameplayEffectCustom
 
 	// 치명타 판정
 	bool bIsCritical = FMath::FRand() < FMath::Clamp(CritChance, 0.f, 1.f);
+
+	FGameplayEffectContextHandle EffectContextHandle = Spec.GetContext();
+	FGameplayEffectContext* Context = EffectContextHandle.Get();
+	FF1GameplayEffectContext* F1Context = static_cast<FF1GameplayEffectContext*>(Context);
+	F1Context->SetIsCriticalHit(bIsCritical);
+
 	if (bIsCritical)
 	{
 		FinalDamage *= (1.f + CritDamage);
