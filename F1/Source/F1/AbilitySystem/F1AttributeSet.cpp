@@ -10,10 +10,12 @@
 #include "Game/F1PlayerState.h"
 #include "Kismet/GameplayStatics.h"
 #include <Game/F1PlayerController.h>
+#include "F1AbilitySystemLibrary.h"
 
 UF1AttributeSet::UF1AttributeSet()
 {
 	CriticalStrikeDamage = 0.5f;
+	CriticalStrikeChance = 0.5f; // TEMP
 }
 
 void UF1AttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -128,7 +130,8 @@ void UF1AttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 				}
 			}
 
-			ShowFloatingText(Props, LocalIncomingDamage);
+			const bool bCriticalHit = UF1AbilitySystemLibrary::IsCriticalHit(Props.EffectContextHandle);
+			ShowFloatingText(Props, LocalIncomingDamage, bCriticalHit);
 		}
 	}
 }
@@ -318,13 +321,13 @@ void UF1AttributeSet::SetEffectProperties(const FGameplayEffectModCallbackData& 
 	}
 }
 
-void UF1AttributeSet::ShowFloatingText(const FEffectProperties& Props, float Damage) const
+void UF1AttributeSet::ShowFloatingText(const FEffectProperties& Props, float Damage, bool bCriticalHit) const
 {
 	if (Props.SourceCharacter != Props.TargetCharacter)
 	{
 		if (AF1PlayerController* PC = Cast<AF1PlayerController>(UGameplayStatics::GetPlayerController(Props.SourceCharacter, 0)))
 		{
-			PC->ShowDamageNumber(Damage, Props.TargetCharacter);
+			PC->ShowDamageNumber(Damage, Props.TargetCharacter, bCriticalHit);
 		}
 	}
 }

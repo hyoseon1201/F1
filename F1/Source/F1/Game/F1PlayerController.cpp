@@ -237,7 +237,7 @@ void AF1PlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
     FollowTime = 0.f;
 }
 
-void AF1PlayerController::ShowDamageNumber_Implementation(float DamageAmount, ACharacter* TargetCharacter)
+void AF1PlayerController::ShowDamageNumber_Implementation(float DamageAmount, ACharacter* TargetCharacter, bool bCriticalHit)
 {
     if (IsValid(TargetCharacter) && DamageTextComponentClass)
     {
@@ -245,6 +245,6 @@ void AF1PlayerController::ShowDamageNumber_Implementation(float DamageAmount, AC
         DamageText->RegisterComponent();
         DamageText->AttachToComponent(TargetCharacter->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
         DamageText->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
-        DamageText->SetDamageText(DamageAmount);
+        DamageText->SetDamageText(DamageAmount, bCriticalHit);
     }
 }

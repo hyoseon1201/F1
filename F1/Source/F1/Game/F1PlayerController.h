@@ -90,7 +90,7 @@ private:
 	// ===========================================
 public:
 	UFUNCTION(Client, Reliable)
-	void ShowDamageNumber(float DamageAmount, ACharacter* TargetCharacter);
+	void ShowDamageNumber(float DamageAmount, ACharacter* TargetCharacter, bool bCriticalHit);
 
 private:
 	UPROPERTY(EditDefaultsOnly)

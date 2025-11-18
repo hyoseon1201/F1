@@ -6,6 +6,7 @@
 #include "AbilitySystem/F1AttributeSet.h"
 #include "GameplayTag/F1GameplayTags.h"
 #include <F1AbilityTypes.h>
+#include "AbilitySystem/F1AbilitySystemLibrary.h"
 
 struct F1PhysicalDamageStatics
 {
@@ -83,9 +84,7 @@ void UF1ExCalcPhysicalDamage::Execute_Implementation(const FGameplayEffectCustom
 	bool bIsCritical = FMath::FRand() < FMath::Clamp(CritChance, 0.f, 1.f);
 
 	FGameplayEffectContextHandle EffectContextHandle = Spec.GetContext();
-	FGameplayEffectContext* Context = EffectContextHandle.Get();
-	FF1GameplayEffectContext* F1Context = static_cast<FF1GameplayEffectContext*>(Context);
-	F1Context->SetIsCriticalHit(bIsCritical);
+	UF1AbilitySystemLibrary::SetIsCriticalHit(EffectContextHandle, bIsCritical);
 
 	if (bIsCritical)
 	{
