@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "AbilitySystem/GameplayAbility/F1GameplayAbility.h"
+#include "AbilitySystem/GameplayAbility/F1DamageGameplayAbility.h"
 #include "F1ProjectileSpell.generated.h"
 
 class AF1Projectile;
@@ -12,19 +12,13 @@ class AF1Projectile;
  * 
  */
 UCLASS()
-class F1_API UF1ProjectileSpell : public UF1GameplayAbility
+class F1_API UF1ProjectileSpell : public UF1DamageGameplayAbility
 {
 	GENERATED_BODY()
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TSubclassOf<AF1Projectile> ProjectileClass;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	TSubclassOf<UGameplayEffect> DamageEffectClass;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	FGameplayTag DamageTypeTag;
 
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 
