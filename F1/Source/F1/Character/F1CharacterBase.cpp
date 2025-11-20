@@ -1,4 +1,4 @@
-#include "Character/F1CharacterBase.h"
+﻿#include "Character/F1CharacterBase.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/PlayerController.h"
@@ -8,6 +8,7 @@
 #include "AbilitySystem/F1AttributeSet.h"
 #include "Components/WidgetComponent.h"
 #include "UI/Widget/F1UserWidget.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "F1.h"
 
 AF1CharacterBase::AF1CharacterBase()
@@ -23,7 +24,7 @@ AF1CharacterBase::AF1CharacterBase()
     GetMesh()->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
     GetMesh()->SetCollisionResponseToChannel(ECC_Projectile, ECR_Overlap);
 
-    // �⺻ �� ����
+    // 기본 팀 설정
     TeamID = FGenericTeamId(0);
 
     HealthBar = CreateDefaultSubobject<UWidgetComponent>("HealthBar");
@@ -195,160 +196,59 @@ UAbilitySystemComponent* AF1CharacterBase::GetAbilitySystemComponent() const
     return AbilitySystemComponent;
 }
 
-void AF1CharacterBase::InitializeDefaultAttributes()
+void AF1CharacterBase::BindMovementSpeedDelegate()
 {
-    if (!HasAuthority()) return;
-    check(IsValid(GetAbilitySystemComponent()));
-    check(DefaultAttributes);
+    if (!AbilitySystemComponent || !AttributeSet || !GetCharacterMovement()) return;
 
-    const FGameplayEffectContextHandle ContextHandle = GetAbilitySystemComponent()->MakeEffectContext();
-    const FGameplayEffectSpecHandle SpecHandle = GetAbilitySystemComponent()->MakeOutgoingSpec(DefaultAttributes, 1.f, ContextHandle);
-    GetAbilitySystemComponent()->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
-}
+    const UF1AttributeSet* F1AS = CastChecked<UF1AttributeSet>(AttributeSet);
 
-void AF1CharacterBase::AddCharacterAbilities()
-{
-    UF1AbilitySystemComponent* F1ASC = CastChecked<UF1AbilitySystemComponent>(AbilitySystemComponent);
-    if (!HasAuthority()) return;
-    F1ASC->AddCharacterAbilities(StartupAbilities);
+    // 델리게이트 등록 및 초기값 동기화 처리
+    AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AS->GetMovementSpeedAttribute()).AddLambda(
+        [this, F1AS](const FOnAttributeChangeData& Data)
+        {
+            // 델리게이트가 호출될 때마다 MaxWalkSpeed를 업데이트
+            GetCharacterMovement()->MaxWalkSpeed = Data.NewValue;
+        }
+    );
 }
 
 void AF1CharacterBase::InitializeHealthBarWidget()
 {
-    UE_LOG(LogTemp, Warning, TEXT("========== InitializeHealthBarWidget =========="));
-    UE_LOG(LogTemp, Warning, TEXT("Character: %s"), *GetName());
+    // 중복 체크 및 필수 컴포넌트 체크 (유지)
+    if (bHealthBarInitialized || !AbilitySystemComponent || !AttributeSet || !HealthBar) return;
 
-    // 1. �ߺ� �ʱ�ȭ ����
-    if (bHealthBarInitialized)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("HealthBar already initialized - Returning"));
-        UE_LOG(LogTemp, Warning, TEXT("==============================================="));
-        return;
-    }
-
-    // 2. ASC/AttributeSet üũ
-    UE_LOG(LogTemp, Warning, TEXT("Checking ASC and AttributeSet..."));
-    UE_LOG(LogTemp, Warning, TEXT("  - ASC: %s"), AbilitySystemComponent ? TEXT("Valid") : TEXT("NULL"));
-    UE_LOG(LogTemp, Warning, TEXT("  - AttributeSet: %s"), AttributeSet ? TEXT("Valid") : TEXT("NULL"));
-
-    if (!AbilitySystemComponent || !AttributeSet)
-    {
-        UE_LOG(LogTemp, Error, TEXT("ASC or AttributeSet is null - Cannot initialize"));
-        UE_LOG(LogTemp, Warning, TEXT("==============================================="));
-        return;
-    }
-
-    // 3. HealthBar Component üũ
-    UE_LOG(LogTemp, Warning, TEXT("Checking HealthBar Component..."));
-    UE_LOG(LogTemp, Warning, TEXT("  - HealthBar Component: %s"), HealthBar ? TEXT("Valid") : TEXT("NULL"));
-
-    if (!HealthBar)
-    {
-        UE_LOG(LogTemp, Error, TEXT("HealthBar Component is NULL!"));
-        UE_LOG(LogTemp, Warning, TEXT("==============================================="));
-        return;
-    }
-
-    // 4. Widget Class üũ
-    UClass* WidgetClass = HealthBar->GetWidgetClass();
-    UE_LOG(LogTemp, Warning, TEXT("Checking Widget Class..."));
-    UE_LOG(LogTemp, Warning, TEXT("  - Widget Class: %s"), WidgetClass ? *WidgetClass->GetName() : TEXT("NULL"));
-
-    if (!WidgetClass)
-    {
-        UE_LOG(LogTemp, Error, TEXT("Widget Class is NOT SET!"));
-        UE_LOG(LogTemp, Error, TEXT("  - Check Blueprint: Components -> HealthBar -> Details -> Widget Class"));
-        UE_LOG(LogTemp, Warning, TEXT("==============================================="));
-        return;
-    }
-
-    // 5. UserWidgetObject üũ (�ʱ� ����)
-    UUserWidget* ExistingWidget = HealthBar->GetUserWidgetObject();
-    UE_LOG(LogTemp, Warning, TEXT("Initial UserWidgetObject state:"));
-    UE_LOG(LogTemp, Warning, TEXT("  - UserWidgetObject: %s"), ExistingWidget ? TEXT("Already Created") : TEXT("NULL - Not Created Yet"));
-
-    // 6. Widget ���� �ʱ�ȭ
-    if (!ExistingWidget)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("Widget not created yet, calling InitWidget()..."));
-        HealthBar->InitWidget();
-
-        // InitWidget ȣ�� �� �ٽ� üũ
-        ExistingWidget = HealthBar->GetUserWidgetObject();
-        UE_LOG(LogTemp, Warning, TEXT("After InitWidget():"));
-        UE_LOG(LogTemp, Warning, TEXT("  - UserWidgetObject: %s"), ExistingWidget ? TEXT("Created Successfully") : TEXT("STILL NULL"));
-    }
-
-    // 7. Widget ȹ�� �� ����
     UUserWidget* Widget = HealthBar->GetUserWidgetObject();
-    if (!Widget)
-    {
-        UE_LOG(LogTemp, Error, TEXT("Failed to get UserWidgetObject!"));
-        UE_LOG(LogTemp, Error, TEXT("  - Widget Class is set: %s"), *WidgetClass->GetName());
-        UE_LOG(LogTemp, Error, TEXT("  - But Widget creation failed"));
-        UE_LOG(LogTemp, Error, TEXT("  - Possible causes:"));
-        UE_LOG(LogTemp, Error, TEXT("    1. Widget BP has compilation errors"));
-        UE_LOG(LogTemp, Error, TEXT("    2. WidgetComponent not fully initialized yet"));
-        UE_LOG(LogTemp, Error, TEXT("    3. Timing issue - try delaying initialization"));
-        UE_LOG(LogTemp, Warning, TEXT("==============================================="));
-        return;
-    }
+    if (!Widget) return;
 
-    UE_LOG(LogTemp, Warning, TEXT("Widget obtained successfully: %s"), *Widget->GetName());
-    UE_LOG(LogTemp, Warning, TEXT("  - Widget Class: %s"), *Widget->GetClass()->GetName());
-
-    // 8. F1UserWidget ĳ����
     UF1UserWidget* F1UserWidget = Cast<UF1UserWidget>(Widget);
-    UE_LOG(LogTemp, Warning, TEXT("Casting to F1UserWidget..."));
+    if (!F1UserWidget) return;
 
-    if (!F1UserWidget)
-    {
-        UE_LOG(LogTemp, Error, TEXT("Widget is NOT F1UserWidget!"));
-        UE_LOG(LogTemp, Error, TEXT("  - Expected: UF1UserWidget"));
-        UE_LOG(LogTemp, Error, TEXT("  - Actual: %s"), *Widget->GetClass()->GetName());
-        UE_LOG(LogTemp, Error, TEXT("  - Check if WBP_HealthBar parent class is F1UserWidget"));
-        UE_LOG(LogTemp, Warning, TEXT("==============================================="));
-        return;
-    }
-
-    UE_LOG(LogTemp, Warning, TEXT("Cast successful - Setting WidgetController"));
-
-    // 9. WidgetController ����
+    // WidgetController 설정 (유지)
     F1UserWidget->SetWidgetController(this);
-    UE_LOG(LogTemp, Warning, TEXT("WidgetController set successfully"));
 
-    // 10. AttributeSet ��������Ʈ ���ε�
-    UE_LOG(LogTemp, Warning, TEXT("Binding Attribute delegates..."));
     UF1AttributeSet* F1AS = CastChecked<UF1AttributeSet>(AttributeSet);
 
-    AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AS->GetHealthAttribute()).AddLambda(
-        [this](const FOnAttributeChangeData& Data)
-        {
-            OnHealthChanged.Broadcast(Data.NewValue);
-        }
-    );
+    // 1. 델리게이트 바인딩 (유지)
+    AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AS->GetHealthAttribute())
+        .AddLambda([this](const FOnAttributeChangeData& Data) { OnHealthChanged.Broadcast(Data.NewValue); });
 
-    AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AS->GetMaxHealthAttribute()).AddLambda(
-        [this](const FOnAttributeChangeData& Data)
-        {
-            OnMaxHealthChanged.Broadcast(Data.NewValue);
-        }
-    );
+    AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AS->GetMaxHealthAttribute())
+        .AddLambda([this](const FOnAttributeChangeData& Data) { OnMaxHealthChanged.Broadcast(Data.NewValue); });
 
-    UE_LOG(LogTemp, Warning, TEXT("Delegates bound successfully"));
 
-    // 11. �ʱⰪ ��ε�ĳ��Ʈ
-    float InitialHealth = F1AS->GetHealth();
-    float InitialMaxHealth = F1AS->GetMaxHealth();
-
-    UE_LOG(LogTemp, Warning, TEXT("Broadcasting initial values:"));
-    UE_LOG(LogTemp, Warning, TEXT("  - Health: %.2f"), InitialHealth);
-    UE_LOG(LogTemp, Warning, TEXT("  - MaxHealth: %.2f"), InitialMaxHealth);
+    // 2. 💡 수동으로 현재 값을 브로드캐스트합니다. (이 부분이 초기화 타이밍을 강제합니다)
+    //    GAS 델리게이트가 자동으로 트리거되지 않거나, WBP의 숨김 로직을 잘못 트리거하는 것을 방지합니다.
+    const float InitialHealth = F1AS->GetHealth();
+    const float InitialMaxHealth = F1AS->GetMaxHealth();
 
     OnHealthChanged.Broadcast(InitialHealth);
     OnMaxHealthChanged.Broadcast(InitialMaxHealth);
 
+
+    if (HealthBar)
+    {
+        HealthBar->SetHiddenInGame(false);
+        HealthBar->SetVisibility(true);
+    }
     bHealthBarInitialized = true;
-    UE_LOG(LogTemp, Warning, TEXT("HealthBar initialization complete!"));
-    UE_LOG(LogTemp, Warning, TEXT("==============================================="));
 }

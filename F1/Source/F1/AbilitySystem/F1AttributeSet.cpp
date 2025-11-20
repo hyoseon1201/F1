@@ -325,7 +325,7 @@ void UF1AttributeSet::ShowFloatingText(const FEffectProperties& Props, float Dam
 {
 	if (Props.SourceCharacter != Props.TargetCharacter)
 	{
-		if (AF1PlayerController* PC = Cast<AF1PlayerController>(UGameplayStatics::GetPlayerController(Props.SourceCharacter, 0)))
+		if (AF1PlayerController* PC = Cast<AF1PlayerController>(Props.SourceCharacter->Controller))
 		{
 			PC->ShowDamageNumber(Damage, Props.TargetCharacter, bCriticalHit);
 		}

@@ -94,6 +94,10 @@ public:
     virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
     UAttributeSet* GetAttributeSet() const { return AttributeSet; }
 
+    TSubclassOf<UGameplayEffect> GetDefaultAttributes() const { return DefaultAttributes; }
+    TSubclassOf<UGameplayEffect> GetGrowthAttributes() const { return GrowthAttributes; }
+    const TArray<TSubclassOf<UGameplayAbility>>& GetStartupAbilities() const { return StartupAbilities; }
+
 protected:
     UPROPERTY()
     TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
@@ -110,8 +114,7 @@ protected:
     UPROPERTY(EditAnywhere, Category = "Abilities")
     TArray<TSubclassOf<UGameplayAbility>> StartupAbilities;
 
-    void InitializeDefaultAttributes();
-    void AddCharacterAbilities();
+    void BindMovementSpeedDelegate();
 
     // ===========================================
     // Wolrd Widget

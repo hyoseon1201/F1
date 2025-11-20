@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "Character/F1HeroCharacter.h"
@@ -13,6 +13,7 @@
 #include "AbilitySystem/F1AttributeSet.h"
 #include "Net/UnrealNetwork.h"
 #include "Components/CapsuleComponent.h"
+#include <AbilitySystem/F1AbilitySystemLibrary.h>
 
 AF1HeroCharacter::AF1HeroCharacter()
 {
@@ -40,43 +41,48 @@ void AF1HeroCharacter::PossessedBy(AController* NewController)
 {
     Super::PossessedBy(NewController);
 
-    InitAbilityActorInfo();
-    AddCharacterAbilities();
+    if (HasAuthority())
+    {
+        // 1. 데이터 설정 (GE/GA 클래스 정보 로드 및 복제 시작)
+        SetCharacterClass(FName("Dekker"));
 
-    InitializeHealthBarWidget();
+        // 2. GAS 연결 (ASC/AS 포인터 설정)
+        InitAbilityActorInfo();
 
+        // 3. Attributes 및 Abilities 부여 (Library 사용)
+        UF1AbilitySystemLibrary::InitializeDefaultAttributes(this);
+        UF1AbilitySystemLibrary::AddCharacterAbilities(this);
+
+        // 4. 레벨 기반 성장 적용 (있다면)
+        ApplyLevelBasedGrowth();
+    }
 }
 
 void AF1HeroCharacter::OnRep_PlayerState()
 {
     Super::OnRep_PlayerState();
 
+    // 1. GAS 연결 (클라이언트에서 PlayerState 데이터와 Character 연결)
     InitAbilityActorInfo();
 
+    if (IsLocallyControlled()) // 또는 이 캐릭터가 보는 화면이라면
+    {
+        // 델리게이트 등록 및 최초 바인딩
+        BindMovementSpeedDelegate();
+        SyncMovementSpeedWithAttributeSet();
+    }
+
+    // 2. UI 초기화 (ASC 연결 및 데이터 복제가 완료되었을 가능성이 높은 시점)
     InitializeHealthBarWidget();
 }
 
 void AF1HeroCharacter::SetCharacterClass(FName CharacterRowName)
 {
-    if (!HasAuthority())
-    {
-        UE_LOG(LogTemp, Warning, TEXT("SetCharacterClass called without authority!"));
-        return;
-    }
-
-    if (!CharacterClassDataTable)
-    {
-        UE_LOG(LogTemp, Error, TEXT("CharacterClassDataTable is null!"));
-        return;
-    }
+    // ... 유효성 검사 (유지) ...
+    if (!HasAuthority() || !CharacterClassDataTable) return;
 
     FCharacterClassInfo* ClassInfo = CharacterClassDataTable->FindRow<FCharacterClassInfo>(CharacterRowName, TEXT("SetCharacterClass"));
-
-    if (!ClassInfo)
-    {
-        UE_LOG(LogTemp, Error, TEXT("Character class '%s' not found in DataTable!"), *CharacterRowName.ToString());
-        return;
-    }
+    if (!ClassInfo) return;
 
     CurrentCharacterInfo = *ClassInfo;
     DefaultAttributes = CurrentCharacterInfo.DefaultAttributes;
@@ -85,16 +91,7 @@ void AF1HeroCharacter::SetCharacterClass(FName CharacterRowName)
 
     UpdateCombatSocketsFromCharacterInfo();
 
-    if (DefaultAttributes)
-    {
-        InitializeDefaultAttributes();
-    }
-
-    ApplyLevelBasedGrowth();
-
     ApplyVisualsFromCurrentInfo();
-    
-    UE_LOG(LogTemp, Warning, TEXT("Character Class '%s' set successfully!"), *CurrentCharacterInfo.CharacterName);
 }
 
 int32 AF1HeroCharacter::GetCurrentLevel() const
@@ -189,38 +186,26 @@ void AF1HeroCharacter::UpdateCombatSocketsFromCharacterInfo()
 void AF1HeroCharacter::InitAbilityActorInfo()
 {
     AF1PlayerState* F1PlayerState = GetPlayerState<AF1PlayerState>();
+    if (!F1PlayerState) return;
 
-    if (!F1PlayerState)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("PlayerState not valid in InitAbilityActorInfo"));
-        return;
-    }
-
-    UAbilitySystemComponent* ASC = F1PlayerState->GetAbilitySystemComponent();
-
+    // 1. GAS 연결 (Owner: PlayerState, Avatar: Character)
     F1PlayerState->GetAbilitySystemComponent()->InitAbilityActorInfo(F1PlayerState, this);
     Cast<UF1AbilitySystemComponent>(F1PlayerState->GetAbilitySystemComponent())->AbilityActorInfoSet();
 
+    // 2. 포인터 설정
     AbilitySystemComponent = F1PlayerState->GetAbilitySystemComponent();
     AttributeSet = F1PlayerState->GetAttributeSet();
 
+    // 3. HUD 초기화 (로컬 플레이어 전용)
     if (IsLocallyControlled())
     {
         if (AF1PlayerController* F1PlayerController = Cast<AF1PlayerController>(GetController()))
         {
             if (AF1HUD* F1HUD = Cast<AF1HUD>(F1PlayerController->GetHUD()))
             {
+                // HUD 초기화는 ASC 연결 직후, 로컬 플레이어 클라이언트에서 수행합니다.
                 F1HUD->InitOverlay(F1PlayerController, F1PlayerState, AbilitySystemComponent, AttributeSet);
             }
         }
-    }
-
-    if (HasAuthority())
-    {
-        SetCharacterClass(FName("Dekker"));
-    }
-    else
-    {
-        SyncMovementSpeedWithAttributeSet();
     }
 }
