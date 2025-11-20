@@ -7,6 +7,8 @@
 #include "F1MonsterCharacter.generated.h"
 
 class UWidgetComponent;
+class UBehaviorTree;
+class AF1AIController;
 
 /**
  * 
@@ -17,6 +19,7 @@ class F1_API AF1MonsterCharacter : public AF1CharacterBase
 	GENERATED_BODY()
 public:
 	AF1MonsterCharacter();
+	virtual void PossessedBy(AController* NewController) override;
 
 protected:
 	virtual void BeginPlay() override;
@@ -34,4 +37,13 @@ protected:
 	// ===========================================
 public:
 	virtual void Die() override;
+
+	// ===========================================
+	// AI
+	// ===========================================
+	UPROPERTY(EditAnywhere, Category = "AI")
+	TObjectPtr<UBehaviorTree> BehaviorTree;
+
+	UPROPERTY()
+	TObjectPtr<AF1AIController> F1AIController;
 };

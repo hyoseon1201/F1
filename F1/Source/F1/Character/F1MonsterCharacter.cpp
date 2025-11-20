@@ -4,8 +4,11 @@
 #include "AbilitySystem/F1AbilitySystemComponent.h"
 #include "AbilitySystem/F1AttributeSet.h"
 #include "Components/CapsuleComponent.h"
+#include "AbilitySystem/F1AbilitySystemLibrary.h"
+#include "AI/F1AIController.h"
+#include "BehaviorTree/BehaviorTree.h"
+#include "BehaviorTree/BlackboardComponent.h"
 #include "F1.h"
-#include <AbilitySystem/F1AbilitySystemLibrary.h>
 
 AF1MonsterCharacter::AF1MonsterCharacter()
 {
@@ -14,6 +17,16 @@ AF1MonsterCharacter::AF1MonsterCharacter()
     AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Minimal);
 
     AttributeSet = CreateDefaultSubobject<UF1AttributeSet>("AttributeSet");
+}
+
+void AF1MonsterCharacter::PossessedBy(AController* NewController)
+{
+    Super::PossessedBy(NewController);
+
+    if (!HasAuthority()) return;
+    F1AIController = Cast<AF1AIController>(NewController);
+    F1AIController->GetBlackboardComponent()->InitializeBlackboard(*BehaviorTree->BlackboardAsset);
+    F1AIController->RunBehaviorTree(BehaviorTree);
 }
 
 void AF1MonsterCharacter::BeginPlay()
