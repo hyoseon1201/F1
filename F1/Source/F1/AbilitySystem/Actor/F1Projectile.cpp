@@ -55,39 +55,57 @@ void AF1Projectile::Destroyed()
 }
 
 void AF1Projectile::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+    UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (!HasAuthority()) return;
+    // 1. 유효성 검사 (공통)
+    AActor* ProjectileOwner = GetOwner();
+    if (!ProjectileOwner) return;
+    if (OtherActor == ProjectileOwner) return; // 내가 쏜 것에 내가 맞지 않게 (옵션)
 
-	AActor* ProjectileOwner = GetOwner();
-	if (!ProjectileOwner) return;
+    // 2. 이미 맞았는지 체크 (클라이언트 중복 재생 방지)
+    if (bHit) return;
 
-	// 팀 체크
-	IGenericTeamAgentInterface* SourceTeamAgent = Cast<IGenericTeamAgentInterface>(ProjectileOwner);
-	IGenericTeamAgentInterface* TargetTeamAgent = Cast<IGenericTeamAgentInterface>(OtherActor);
+    // 3. 팀 체크 (공통 - 클라이언트도 팀 정보를 알아야 함)
+    // 주의: PlayerState나 Character의 TeamID가 리플리케이션 되고 있어야 정상 동작합니다.
+    IGenericTeamAgentInterface* SourceTeamAgent = Cast<IGenericTeamAgentInterface>(ProjectileOwner);
+    IGenericTeamAgentInterface* TargetTeamAgent = Cast<IGenericTeamAgentInterface>(OtherActor);
 
-	if (SourceTeamAgent && TargetTeamAgent)
-	{
-		if (SourceTeamAgent->GetGenericTeamId() == TargetTeamAgent->GetGenericTeamId())
-		{
-			return; // 같은 팀
-		}
-	}
+    if (SourceTeamAgent && TargetTeamAgent)
+    {
+        if (SourceTeamAgent->GetGenericTeamId() == TargetTeamAgent->GetGenericTeamId())
+        {
+            return; // 같은 팀이면 그냥 통과하거나 무시
+        }
+    }
 
-	// Impact Effect
-	if (ImpactEffect)
-	{
-		UGameplayStatics::SpawnEmitterAtLocation(this, ImpactEffect, GetActorLocation());
-	}
+    // 4. [시각 효과] 권한과 상관없이 모두 수행 (서버 + 클라이언트)
+    // 여기서 소리와 이펙트를 재생해야 클라이언트 눈에 보입니다.
+    if (ImpactEffect)
+    {
+        UGameplayStatics::SpawnEmitterAtLocation(this, ImpactEffect, GetActorLocation());
+    }
 
-	// 데미지 적용
-	if (UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OtherActor))
-	{
-		if (DamageEffectSpecHandle.Data.IsValid())
-		{
-			TargetASC->ApplyGameplayEffectSpecToSelf(*DamageEffectSpecHandle.Data.Get());
-		}
-	}
+    // (옵션) 사운드 재생
+    // UGameplayStatics::PlaySoundAtLocation(this, ImpactSound, GetActorLocation());
 
-	Destroy();
+
+    // 5. [서버 로직] 데미지 및 파괴 처리
+    if (HasAuthority())
+    {
+        if (UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OtherActor))
+        {
+            if (DamageEffectSpecHandle.Data.IsValid())
+            {
+                TargetASC->ApplyGameplayEffectSpecToSelf(*DamageEffectSpecHandle.Data.Get());
+            }
+        }
+
+        Destroy();
+    }
+    else
+    {
+        // 클라이언트는 서버가 Destroy() 하기 전까지 잠시 살아있을 수 있으므로,
+        // '나는 이미 터졌다'고 표시해두고 추가 충돌을 막습니다.
+        bHit = true;
+    }
 }

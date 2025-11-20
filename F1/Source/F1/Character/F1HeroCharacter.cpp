@@ -49,6 +49,9 @@ void AF1HeroCharacter::PossessedBy(AController* NewController)
         // 2. GAS 연결 (ASC/AS 포인터 설정)
         InitAbilityActorInfo();
 
+        SyncMovementSpeedWithAttributeSet();
+        BindMovementSpeedDelegate();
+
         // 3. Attributes 및 Abilities 부여 (Library 사용)
         UF1AbilitySystemLibrary::InitializeDefaultAttributes(this);
         UF1AbilitySystemLibrary::AddCharacterAbilities(this);
