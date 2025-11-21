@@ -121,10 +121,16 @@ void UF1AttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 
 			const bool bFatal = NewHealth <= 0.f;
 
-			if (bFatal)
+			IF1CombatInterface* CombatInterface = Cast<IF1CombatInterface>(Props.TargetAvatarActor);
+
+			if (CombatInterface)
 			{
-				IF1CombatInterface* CombatInterface = Cast<IF1CombatInterface>(Props.TargetAvatarActor);
-				if (CombatInterface)
+				if (Props.SourceAvatarActor != Props.TargetAvatarActor)
+				{
+					CombatInterface->SetCombatTarget(Props.SourceAvatarActor);
+				}
+
+				if (bFatal)
 				{
 					CombatInterface->Die();
 				}

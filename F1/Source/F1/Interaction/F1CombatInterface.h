@@ -32,4 +32,5 @@ public:
 	void UpdateFacingTarget(const FVector& Target);
 
 	virtual void Die() = 0;
+	virtual void SetCombatTarget(AActor* InTarget) = 0;
 };

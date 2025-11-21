@@ -65,6 +65,7 @@ public:
 
     virtual FVector GetCombatSocketLocation() override;
     virtual void Die() override;
+    virtual void SetCombatTarget(AActor* InTarget) override;
 
     UFUNCTION(NetMulticast, Reliable)
     virtual void MulticastHandleDeath();

@@ -23,6 +23,8 @@ void AF1GameplayEffectActor::BeginPlay()
 
 void AF1GameplayEffectActor::ApplyEffectToTarget(AActor* TargetActor, TSubclassOf<UGameplayEffect> GameplayEffectClass)
 {
+	//if (TargetActor->ActorHasTag(FName("Monster")) && !bApplyEffectsToMonsters) return;
+
 	UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor);
 	if (TargetASC == nullptr) return;
 
@@ -36,10 +38,17 @@ void AF1GameplayEffectActor::ApplyEffectToTarget(AActor* TargetActor, TSubclassO
 	{
 		ActiveEffectHandles.Add(ActiveEffectHandle, TargetASC);
 	}
+
+	//if (bDestroyOnEffectApplication && !bIsInfinite)
+	//{
+	//	Destroy();
+	//}
 }
 
 void AF1GameplayEffectActor::OnOverlap(AActor* TargetActor)
 {
+	//if (TargetActor->ActorHasTag(FName("Monster")) && !bApplyEffectsToMonsters) return;
+
 	if (InstantEffectApplicationPolicy == EEffectApplicationPolicy::ApplyOnOverlap)
 	{
 		ApplyEffectToTarget(TargetActor, InstantGameplayEffectClass);
@@ -56,6 +65,8 @@ void AF1GameplayEffectActor::OnOverlap(AActor* TargetActor)
 
 void AF1GameplayEffectActor::OnEndOverlap(AActor* TargetActor)
 {
+	//if (TargetActor->ActorHasTag(FName("Monster")) && !bApplyEffectsToMonsters) return;
+
 	if (InstantEffectApplicationPolicy == EEffectApplicationPolicy::ApplyOnEndOverlap)
 	{
 		ApplyEffectToTarget(TargetActor, InstantGameplayEffectClass);

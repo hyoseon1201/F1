@@ -8,6 +8,7 @@
 #include "AI/F1AIController.h"
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BlackboardComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "F1.h"
 
 AF1MonsterCharacter::AF1MonsterCharacter()
@@ -17,6 +18,11 @@ AF1MonsterCharacter::AF1MonsterCharacter()
     AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Minimal);
 
     AttributeSet = CreateDefaultSubobject<UF1AttributeSet>("AttributeSet");
+
+    bUseControllerRotationPitch = false;
+    bUseControllerRotationRoll = false;
+    bUseControllerRotationYaw = false;
+    GetCharacterMovement()->bUseControllerDesiredRotation = false;
 }
 
 void AF1MonsterCharacter::PossessedBy(AController* NewController)
@@ -26,6 +32,7 @@ void AF1MonsterCharacter::PossessedBy(AController* NewController)
     if (!HasAuthority()) return;
     F1AIController = Cast<AF1AIController>(NewController);
     F1AIController->GetBlackboardComponent()->InitializeBlackboard(*BehaviorTree->BlackboardAsset);
+    F1AIController->GetBlackboardComponent()->SetValueAsVector(FName("HomeLocation"), GetActorLocation());
     F1AIController->RunBehaviorTree(BehaviorTree);
 }
 
@@ -55,4 +62,12 @@ void AF1MonsterCharacter::Die()
 {
 	SetLifeSpan(LifeSpan);
 	Super::Die();
+}
+
+void AF1MonsterCharacter::SetCombatTarget(AActor* InTarget)
+{
+    if (F1AIController && F1AIController->GetBlackboardComponent())
+    {
+        F1AIController->GetBlackboardComponent()->SetValueAsObject(FName("TargetActor"), InTarget);
+    }
 }
