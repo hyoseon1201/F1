@@ -23,6 +23,8 @@ AF1MonsterCharacter::AF1MonsterCharacter()
     bUseControllerRotationRoll = false;
     bUseControllerRotationYaw = false;
     GetCharacterMovement()->bUseControllerDesiredRotation = false;
+
+    AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 }
 
 void AF1MonsterCharacter::PossessedBy(AController* NewController)
