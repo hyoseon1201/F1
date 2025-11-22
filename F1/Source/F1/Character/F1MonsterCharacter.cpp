@@ -10,6 +10,7 @@
 #include "BehaviorTree/BlackboardComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "F1.h"
+#include <GameplayTag/F1GameplayTags.h>
 
 AF1MonsterCharacter::AF1MonsterCharacter()
 {
@@ -71,5 +72,17 @@ void AF1MonsterCharacter::SetCombatTarget(AActor* InTarget)
     if (F1AIController && F1AIController->GetBlackboardComponent())
     {
         F1AIController->GetBlackboardComponent()->SetValueAsObject(FName("TargetActor"), InTarget);
+    }
+}
+
+void AF1MonsterCharacter::Attack()
+{
+    const FF1GameplayTags& GameplayTags = FF1GameplayTags::Get();
+
+    FGameplayTag AttackTag = GameplayTags.Ability_BasicAttack;
+
+    if (AbilitySystemComponent)
+    {
+        AbilitySystemComponent->TryActivateAbilitiesByTag(FGameplayTagContainer(AttackTag));
     }
 }

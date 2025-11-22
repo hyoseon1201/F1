@@ -33,4 +33,5 @@ public:
 
 	virtual void Die() = 0;
 	virtual void SetCombatTarget(AActor* InTarget) = 0;
+	virtual void Attack() = 0;
 };

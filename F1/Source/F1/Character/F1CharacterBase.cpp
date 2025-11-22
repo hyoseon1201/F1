@@ -180,6 +180,10 @@ void AF1CharacterBase::SetCombatTarget(AActor* InTarget)
 {
 }
 
+void AF1CharacterBase::Attack()
+{
+}
+
 void AF1CharacterBase::MulticastHandleDeath_Implementation()
 {
     GetMesh()->SetSimulatePhysics(true);

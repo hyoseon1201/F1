@@ -38,6 +38,7 @@ protected:
 public:
 	virtual void Die() override;
 	virtual void SetCombatTarget(AActor* InTarget) override;
+	virtual void Attack() override;
 
 	// ===========================================
 	// AI
