@@ -64,4 +64,19 @@ public:
 	virtual FVector GetCombatSocketLocation() override;
 
 	virtual void Die() override;
+
+	// ===========================================
+	// Wolrd Widget
+	// ===========================================
+
+protected:
+	UPROPERTY(EditAnywhere, Category = "UI")
+	TSubclassOf<class UF1WidgetController> HeroWidgetControllerClass;
+
+	// 위젯 컴포넌트 (머리 위 체력바)
+	// (BaseCharacter에 있다면 생략 가능)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
+	TObjectPtr<class UWidgetComponent> PlayerBar;
+
+	virtual void InitUI() override;
 };

@@ -11,6 +11,8 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "F1.h"
 #include <GameplayTag/F1GameplayTags.h>
+#include <UI/Widget/F1UserWidget.h>
+#include "Components/WidgetComponent.h"
 
 AF1MonsterCharacter::AF1MonsterCharacter()
 {
@@ -26,6 +28,9 @@ AF1MonsterCharacter::AF1MonsterCharacter()
     GetCharacterMovement()->bUseControllerDesiredRotation = false;
 
     AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
+
+    HealthBar = CreateDefaultSubobject<UWidgetComponent>("HealthBar");
+    HealthBar->SetupAttachment(GetRootComponent());
 }
 
 void AF1MonsterCharacter::PossessedBy(AController* NewController)
@@ -45,7 +50,7 @@ void AF1MonsterCharacter::BeginPlay()
 
     InitAbilityActorInfo();
 
-    InitializeHealthBarWidget();
+    InitUI();
 }
 
 void AF1MonsterCharacter::InitAbilityActorInfo()
@@ -85,4 +90,62 @@ void AF1MonsterCharacter::Attack()
     {
         AbilitySystemComponent->TryActivateAbilitiesByTag(FGameplayTagContainer(AttackTag));
     }
+}
+
+void AF1MonsterCharacter::InitUI()
+{
+    // 부모 클래스의 로직(있다면) 실행
+    Super::InitUI();
+
+    // 1. 방어 코드: 이미 초기화됐거나, 필수 요소가 없으면 중단
+    if (bHealthBarInitialized) return;
+    if (!AbilitySystemComponent || !AttributeSet) return;
+    if (!HealthBar) return; // HealthBar는 WidgetComponent
+
+    // 2. 위젯 객체 가져오기
+    UUserWidget* Widget = HealthBar->GetUserWidgetObject();
+    if (!Widget) return;
+
+    // 3. 우리가 만든 F1UserWidget으로 캐스팅
+    UF1UserWidget* F1UserWidget = Cast<UF1UserWidget>(Widget);
+    if (!F1UserWidget) return;
+
+    // ====================================================
+    // [핵심] 몬스터는 "나 자신(this)"을 위젯 컨트롤러로 설정합니다.
+    // 몬스터는 구조가 단순해서 별도의 Controller 클래스를 안 만듭니다.
+    // ====================================================
+    F1UserWidget->SetWidgetController(this);
+
+    // 4. GAS 델리게이트 바인딩
+    // AttributeSet에서 값이 변할 때 -> 내 델리게이트(OnHealthChanged)를 호출해라
+    const UF1AttributeSet* F1AS = CastChecked<UF1AttributeSet>(AttributeSet);
+
+    // Health 변경 감지
+    AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AS->GetHealthAttribute())
+        .AddLambda([this](const FOnAttributeChangeData& Data)
+            {
+                OnHealthChanged.Broadcast(Data.NewValue);
+            });
+
+    // MaxHealth 변경 감지
+    AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AS->GetMaxHealthAttribute())
+        .AddLambda([this](const FOnAttributeChangeData& Data)
+            {
+                OnMaxHealthChanged.Broadcast(Data.NewValue);
+            });
+
+    // 5. [중요] 초기값 강제 방송 (Broadcast Initial Values)
+    // 게임 시작 시점의 체력(꽉 찬 상태)을 UI에 즉시 반영합니다.
+    const float InitialHealth = F1AS->GetHealth();
+    const float InitialMaxHealth = F1AS->GetMaxHealth();
+
+    OnHealthChanged.Broadcast(InitialHealth);
+    OnMaxHealthChanged.Broadcast(InitialMaxHealth);
+
+    // 6. 위젯 보이게 설정 (숨겨져 있었다면)
+    HealthBar->SetHiddenInGame(false);
+    HealthBar->SetVisibility(true);
+
+    // 초기화 완료 플래그 세팅
+    bHealthBarInitialized = true;
 }

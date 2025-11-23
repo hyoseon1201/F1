@@ -4,6 +4,7 @@
 #include "AbilitySystemComponent.h"
 #include "GameplayTag/F1GameplayTags.h"
 #include "Engine/OverlapResult.h"
+#include "DrawDebugHelpers.h"
 
 void UF1Melee::TriggerMeleeAttack()
 {
@@ -14,6 +15,12 @@ void UF1Melee::TriggerMeleeAttack()
 	// 2. 주변 적 탐지 (Sphere Overlap)
 	TArray<FOverlapResult> OverlapResults;
 	FVector Origin = AvatarActor->GetActorLocation();
+
+	if (bDrawDebug)
+	{
+		// 파라미터: 월드, 중심점, 반지름, 분할수(원 부드러움), 색상, 영구지속여부, 지속시간
+		DrawDebugSphere(GetWorld(), Origin, AttackRadius, 12, FColor::Red, false, 2.0f);
+	}
 
 	// 내 위치를 중심으로 구체 검사
 	FCollisionQueryParams QueryParams;
@@ -36,6 +43,11 @@ void UF1Melee::TriggerMeleeAttack()
 		for (const FOverlapResult& Result : OverlapResults)
 		{
 			AActor* TargetActor = Result.GetActor();
+
+			if (bDrawDebug)
+			{
+				DrawDebugPoint(GetWorld(), TargetActor->GetActorLocation(), 10.0f, FColor::Green, false, 2.0f);
+			}
 
 			// 적군인지 확인 (팀 ID 체크 또는 태그 체크 등)
 			// 여기서는 간단하게 ICombatInterface의 GetTeam() 등을 활용하거나

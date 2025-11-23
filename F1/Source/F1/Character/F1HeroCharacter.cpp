@@ -14,6 +14,8 @@
 #include "Net/UnrealNetwork.h"
 #include "Components/CapsuleComponent.h"
 #include <AbilitySystem/F1AbilitySystemLibrary.h>
+#include "Components/WidgetComponent.h"
+#include "UI/Widget/F1UserWidget.h"
 
 AF1HeroCharacter::AF1HeroCharacter()
 {
@@ -28,6 +30,9 @@ AF1HeroCharacter::AF1HeroCharacter()
 
 	// TEMP
 	SetGenericTeamId(FGenericTeamId(1));
+
+    PlayerBar = CreateDefaultSubobject<UWidgetComponent>("PlayerBar");
+    PlayerBar->SetupAttachment(GetRootComponent());
 }
 
 void AF1HeroCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -59,6 +64,8 @@ void AF1HeroCharacter::PossessedBy(AController* NewController)
         // 4. 레벨 기반 성장 적용 (있다면)
         ApplyLevelBasedGrowth();
     }
+
+    InitUI();
 }
 
 void AF1HeroCharacter::OnRep_PlayerState()
@@ -76,7 +83,7 @@ void AF1HeroCharacter::OnRep_PlayerState()
     }
 
     // 2. UI 초기화 (ASC 연결 및 데이터 복제가 완료되었을 가능성이 높은 시점)
-    InitializeHealthBarWidget();
+    InitUI();
 }
 
 void AF1HeroCharacter::SetCharacterClass(FName CharacterRowName)
@@ -140,6 +147,52 @@ void AF1HeroCharacter::Die()
 {
     SetLifeSpan(LifeSpan);
     Super::Die();
+}
+
+void AF1HeroCharacter::InitUI()
+{
+    // 1. 필수 데이터와 위젯 컴포넌트가 있는지 확인 (방어 코드)
+    APlayerState* PS = GetPlayerState();
+    if (!PS || !AbilitySystemComponent || !AttributeSet) return;
+    if (!PlayerBar) return;
+
+    UUserWidget* Widget = PlayerBar->GetUserWidgetObject();
+
+    // [추가] 만약 없으면 강제로 만드세요.
+    if (!Widget)
+    {
+        PlayerBar->InitWidget(); // 강제 초기화
+        Widget = PlayerBar->GetUserWidgetObject();
+    }
+
+    // 2. 위젯 컴포넌트에서 실제 위젯 객체(UserWidget)를 가져옴
+    UF1UserWidget* HeroBarWidget = Cast<UF1UserWidget>(Widget);
+
+    // 3. 컨트롤러 클래스가 설정되어 있는지 확인
+    if (HeroBarWidget && HeroWidgetControllerClass)
+    {
+        // 4. 파라미터 구조체 생성 (핵심 데이터 4인방 수집)
+        const FWidgetControllerParams Params(
+            GetController<APlayerController>(),
+            PS,
+            AbilitySystemComponent,
+            AttributeSet
+        );
+
+        // 5. 위젯 컨트롤러 객체 생성 (NewObject)
+        // 여기서 BP_HeroWidgetController가 생성됩니다.
+        UF1WidgetController* WidgetController = NewObject<UF1WidgetController>(this, HeroWidgetControllerClass);
+
+        // 6. 컨트롤러에 데이터 주입
+        WidgetController->SetWidgetControllerParams(Params);
+
+        // 7. 위젯에게 컨트롤러 전달 (이때 BP의 'Event WidgetControllerSet'이 발동!)
+        HeroBarWidget->SetWidgetController(WidgetController);
+
+        // 8. 초기값 방송 및 델리게이트 바인딩 (화면 갱신 시작)
+        WidgetController->BroadcastInitialValues();
+        WidgetController->BindCallbacksToDependencies();
+    }
 }
 
 void AF1HeroCharacter::OnRep_CurrentCharacterInfo()

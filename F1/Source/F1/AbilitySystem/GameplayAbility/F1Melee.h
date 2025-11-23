@@ -23,6 +23,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Melee")
 	TObjectPtr<UAnimMontage> MeleeMontage;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Melee")
+	bool bDrawDebug = true;
+
 	// [핵심] 블루프린트에서 호출할 공격 판정 함수
 	// 몽타주의 노티파이(Notify) 시점에 이 함수가 실행됩니다.
 	UFUNCTION(BlueprintCallable, Category = "Melee")

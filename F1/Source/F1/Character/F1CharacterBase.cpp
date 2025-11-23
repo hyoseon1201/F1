@@ -26,9 +26,6 @@ AF1CharacterBase::AF1CharacterBase()
 
     // 기본 팀 설정
     TeamID = FGenericTeamId(0);
-
-    HealthBar = CreateDefaultSubobject<UWidgetComponent>("HealthBar");
-    HealthBar->SetupAttachment(GetRootComponent());
 }
 
 void AF1CharacterBase::BeginPlay()
@@ -220,43 +217,6 @@ void AF1CharacterBase::BindMovementSpeedDelegate()
     );
 }
 
-void AF1CharacterBase::InitializeHealthBarWidget()
+void AF1CharacterBase::InitUI()
 {
-    // 중복 체크 및 필수 컴포넌트 체크 (유지)
-    if (bHealthBarInitialized || !AbilitySystemComponent || !AttributeSet || !HealthBar) return;
-
-    UUserWidget* Widget = HealthBar->GetUserWidgetObject();
-    if (!Widget) return;
-
-    UF1UserWidget* F1UserWidget = Cast<UF1UserWidget>(Widget);
-    if (!F1UserWidget) return;
-
-    // WidgetController 설정 (유지)
-    F1UserWidget->SetWidgetController(this);
-
-    UF1AttributeSet* F1AS = CastChecked<UF1AttributeSet>(AttributeSet);
-
-    // 1. 델리게이트 바인딩 (유지)
-    AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AS->GetHealthAttribute())
-        .AddLambda([this](const FOnAttributeChangeData& Data) { OnHealthChanged.Broadcast(Data.NewValue); });
-
-    AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AS->GetMaxHealthAttribute())
-        .AddLambda([this](const FOnAttributeChangeData& Data) { OnMaxHealthChanged.Broadcast(Data.NewValue); });
-
-
-    // 2. 💡 수동으로 현재 값을 브로드캐스트합니다. (이 부분이 초기화 타이밍을 강제합니다)
-    //    GAS 델리게이트가 자동으로 트리거되지 않거나, WBP의 숨김 로직을 잘못 트리거하는 것을 방지합니다.
-    const float InitialHealth = F1AS->GetHealth();
-    const float InitialMaxHealth = F1AS->GetMaxHealth();
-
-    OnHealthChanged.Broadcast(InitialHealth);
-    OnMaxHealthChanged.Broadcast(InitialMaxHealth);
-
-
-    if (HealthBar)
-    {
-        HealthBar->SetHiddenInGame(false);
-        HealthBar->SetVisibility(true);
-    }
-    bHealthBarInitialized = true;
 }

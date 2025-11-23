@@ -123,17 +123,6 @@ protected:
     // ===========================================
 
 protected:
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-    TObjectPtr<UWidgetComponent> HealthBar;
 
-    UPROPERTY(BlueprintAssignable)
-    FOnAttributeChangedSignature OnHealthChanged;
-
-    UPROPERTY(BlueprintAssignable)
-    FOnAttributeChangedSignature OnMaxHealthChanged;
-
-    void InitializeHealthBarWidget();
-
-private:
-    bool bHealthBarInitialized = false;
+    virtual void InitUI();
 };

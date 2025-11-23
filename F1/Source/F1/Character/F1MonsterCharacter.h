@@ -48,4 +48,23 @@ public:
 
 	UPROPERTY()
 	TObjectPtr<AF1AIController> F1AIController;
+
+	// ===========================================
+	// Wolrd Widget
+	// ===========================================
+
+protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	TObjectPtr<UWidgetComponent> HealthBar;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnAttributeChangedSignature OnHealthChanged;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnAttributeChangedSignature OnMaxHealthChanged;
+
+	bool bHealthBarInitialized = false;
+
+	virtual void InitUI() override;
+
 };
