@@ -28,9 +28,6 @@ AF1HeroCharacter::AF1HeroCharacter()
 	bUseControllerRotationRoll = false;
 	bUseControllerRotationYaw = false;
 
-	// TEMP
-	SetGenericTeamId(FGenericTeamId(1));
-
     PlayerBar = CreateDefaultSubobject<UWidgetComponent>("PlayerBar");
     PlayerBar->SetupAttachment(GetRootComponent());
 }
@@ -63,6 +60,12 @@ void AF1HeroCharacter::PossessedBy(AController* NewController)
 
         // 4. 레벨 기반 성장 적용 (있다면)
         ApplyLevelBasedGrowth();
+
+        if (AF1PlayerState* F1PS = GetPlayerState<AF1PlayerState>())
+        {
+            // 내 캐릭터의 TeamID를 PlayerState의 것과 일치시킴
+            SetGenericTeamId(F1PS->GetGenericTeamId());
+        }
     }
 
     InitUI();
@@ -80,6 +83,11 @@ void AF1HeroCharacter::OnRep_PlayerState()
         // 델리게이트 등록 및 최초 바인딩
         BindMovementSpeedDelegate();
         SyncMovementSpeedWithAttributeSet();
+    }
+
+    if (AF1PlayerState* F1PS = GetPlayerState<AF1PlayerState>())
+    {
+        SetGenericTeamId(F1PS->GetGenericTeamId());
     }
 
     // 2. UI 초기화 (ASC 연결 및 데이터 복제가 완료되었을 가능성이 높은 시점)
