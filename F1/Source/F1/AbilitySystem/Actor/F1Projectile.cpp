@@ -11,6 +11,7 @@
 #include "AbilitySystemComponent.h"
 #include "GenericTeamAgentInterface.h"
 #include "AbilitySystem/F1AttributeSet.h"
+#include "GameFramework/ProjectileMovementComponent.h"
 
 AF1Projectile::AF1Projectile()
 {
@@ -31,6 +32,22 @@ AF1Projectile::AF1Projectile()
 	ProjectileMovement->InitialSpeed = 550.f;
 	ProjectileMovement->MaxSpeed = 550.f;
 	ProjectileMovement->ProjectileGravityScale = 0.f;
+}
+
+void AF1Projectile::SetHomingTarget(AActor* TargetActor)
+{
+    if (TargetActor && ProjectileMovement)
+    {
+        // 1. 유도 기능 활성화
+        ProjectileMovement->bIsHomingProjectile = true;
+
+        // 2. 유도 가속도 설정 (이게 높아야 확 꺾어서 쫓아갑니다)
+        // 블루프린트에서 설정한 값을 덮어쓸 수도 있으니, 필요하면 이 줄은 주석 처리하고 BP에서 조절하세요.
+        ProjectileMovement->HomingAccelerationMagnitude = 20000.f;
+
+        // 3. [핵심] 누구를 쫓아갈지 설정 (타겟의 뿌리 컴포넌트)
+        ProjectileMovement->HomingTargetComponent = TargetActor->GetRootComponent();
+    }
 }
 
 void AF1Projectile::BeginPlay()

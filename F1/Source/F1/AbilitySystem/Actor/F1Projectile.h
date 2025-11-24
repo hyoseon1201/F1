@@ -25,6 +25,8 @@ public:
 	UPROPERTY(BlueprintReadOnly, meta = (ExposeOnSpawn = true))
 	FGameplayEffectSpecHandle DamageEffectSpecHandle;
 
+	void SetHomingTarget(AActor* TargetActor);
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void Destroyed() override;

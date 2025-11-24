@@ -17,7 +17,7 @@ class F1_API UF1Melee : public UF1DamageGameplayAbility
 protected:
 	// 공격 범위 (반경)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Melee")
-	float AttackRadius = 150.f;
+	float AttackRadius = 50.f;
 
 	// 공격 시 재생할 몽타주
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Melee")

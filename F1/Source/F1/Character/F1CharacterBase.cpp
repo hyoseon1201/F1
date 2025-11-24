@@ -168,6 +168,11 @@ FVector AF1CharacterBase::GetCombatSocketLocation()
     return DefaultLocation;
 }
 
+AActor* AF1CharacterBase::GetCombatTarget_Implementation() const
+{
+    return nullptr;
+}
+
 void AF1CharacterBase::Die()
 {
     MulticastHandleDeath();

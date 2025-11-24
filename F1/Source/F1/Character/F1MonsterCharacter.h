@@ -39,6 +39,11 @@ public:
 	virtual void Die() override;
 	virtual void SetCombatTarget(AActor* InTarget) override;
 	virtual void Attack() override;
+	virtual AActor* GetCombatTarget_Implementation() const override;
+
+protected:
+	UPROPERTY(BlueprintReadOnly, Category = "Combat")
+	TObjectPtr<AActor> CombatTarget;
 
 	// ===========================================
 	// AI

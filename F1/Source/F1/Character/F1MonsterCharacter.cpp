@@ -74,6 +74,8 @@ void AF1MonsterCharacter::Die()
 
 void AF1MonsterCharacter::SetCombatTarget(AActor* InTarget)
 {
+    CombatTarget = InTarget;
+
     if (F1AIController && F1AIController->GetBlackboardComponent())
     {
         F1AIController->GetBlackboardComponent()->SetValueAsObject(FName("TargetActor"), InTarget);
@@ -90,6 +92,11 @@ void AF1MonsterCharacter::Attack()
     {
         AbilitySystemComponent->TryActivateAbilitiesByTag(FGameplayTagContainer(AttackTag));
     }
+}
+
+AActor* AF1MonsterCharacter::GetCombatTarget_Implementation() const
+{
+    return CombatTarget;
 }
 
 void AF1MonsterCharacter::InitUI()

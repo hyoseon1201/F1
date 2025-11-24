@@ -25,4 +25,6 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "Projectile")
 	void SpawnProjectile(const FVector& ProjectileTargetLocation);
 
+	UFUNCTION(BlueprintCallable, Category = "Projectile")
+	void SpawnHomingProjectile(AActor* HomingTarget);
 };

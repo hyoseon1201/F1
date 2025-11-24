@@ -64,6 +64,7 @@ public:
     virtual void ApplyLevelBasedGrowth() override;
 
     virtual FVector GetCombatSocketLocation() override;
+    virtual AActor* GetCombatTarget_Implementation() const override;
     virtual void Die() override;
     virtual void SetCombatTarget(AActor* InTarget) override;
     virtual void Attack() override;
