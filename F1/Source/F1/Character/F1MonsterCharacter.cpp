@@ -41,6 +41,7 @@ void AF1MonsterCharacter::PossessedBy(AController* NewController)
     F1AIController = Cast<AF1AIController>(NewController);
     F1AIController->GetBlackboardComponent()->InitializeBlackboard(*BehaviorTree->BlackboardAsset);
     F1AIController->GetBlackboardComponent()->SetValueAsVector(FName("HomeLocation"), GetActorLocation());
+    F1AIController->GetBlackboardComponent()->SetValueAsFloat(FName("AttackRange"), DefaultAttackRange);
     F1AIController->RunBehaviorTree(BehaviorTree);
 }
 

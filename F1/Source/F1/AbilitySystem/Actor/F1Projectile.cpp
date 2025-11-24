@@ -11,7 +11,6 @@
 #include "AbilitySystemComponent.h"
 #include "GenericTeamAgentInterface.h"
 #include "AbilitySystem/F1AttributeSet.h"
-#include "GameFramework/ProjectileMovementComponent.h"
 
 AF1Projectile::AF1Projectile()
 {

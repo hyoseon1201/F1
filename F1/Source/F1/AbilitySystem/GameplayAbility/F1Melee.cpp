@@ -14,7 +14,8 @@ void UF1Melee::TriggerMeleeAttack()
 
 	// 2. 주변 적 탐지 (Sphere Overlap)
 	TArray<FOverlapResult> OverlapResults;
-	FVector Origin = AvatarActor->GetActorLocation();
+	const FVector ForwardDir = AvatarActor->GetActorForwardVector();
+	const FVector Origin = AvatarActor->GetActorLocation() + (ForwardDir * 50.f);
 
 	if (bDrawDebug)
 	{

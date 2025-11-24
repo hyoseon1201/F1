@@ -9,8 +9,8 @@
 UF1BTService_CheckDistance::UF1BTService_CheckDistance()
 {
 	NodeName = TEXT("Check Distance to Home");
-	Interval = 0.5f;        // 0.5초마다 검사 (성능 조절 가능)
-	RandomDeviation = 0.1f; // 틱 타이밍을 살짝 섞음
+	Interval = 0.5f;
+	RandomDeviation = 0.1f;
 }
 
 void UF1BTService_CheckDistance::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds)

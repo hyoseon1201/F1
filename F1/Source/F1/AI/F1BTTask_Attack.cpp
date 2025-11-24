@@ -2,7 +2,7 @@
 #include "AI/F1BTTask_Attack.h"
 #include "AIController.h"
 #include "GameFramework/Character.h"
-#include "Interaction/F1CombatInterface.h" // [중요] 인터페이스 헤더 포함
+#include "Interaction/F1CombatInterface.h"
 
 UF1BTTask_Attack::UF1BTTask_Attack()
 {
