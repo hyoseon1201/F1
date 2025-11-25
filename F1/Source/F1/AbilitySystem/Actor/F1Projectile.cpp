@@ -14,23 +14,32 @@
 
 AF1Projectile::AF1Projectile()
 {
-	PrimaryActorTick.bCanEverTick = false;
-	bReplicates = true;
+    PrimaryActorTick.bCanEverTick = false;
+    bReplicates = true;
 
-	Sphere = CreateDefaultSubobject<USphereComponent>("Sphere");
-	SetRootComponent(Sphere);
-	Sphere->SetCollisionObjectType(ECC_Projectile);
-	Sphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	Sphere->SetCollisionResponseToAllChannels(ECR_Ignore);
-	Sphere->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Overlap);
-	Sphere->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Overlap);
-	Sphere->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
-	Sphere->SetGenerateOverlapEvents(true);
+    Sphere = CreateDefaultSubobject<USphereComponent>("Sphere");
+    SetRootComponent(Sphere);
 
-	ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>("ProjectileMovement");
-	ProjectileMovement->InitialSpeed = 550.f;
-	ProjectileMovement->MaxSpeed = 550.f;
-	ProjectileMovement->ProjectileGravityScale = 0.f;
+    // [수정] 아래 하드코딩된 설정들을 모두 지우거나 주석 처리하세요!
+    // 이유: 자식 BP(곡사포)가 'QueryAndPhysics'와 'Block'을 쓰고 싶은데,
+    // 부모가 'QueryOnly'와 'Overlap'을 강요하고 있어서 충돌이 무시됨.
+
+    /* --- 삭제 또는 주석 처리 시작 ---
+    Sphere->SetCollisionObjectType(ECC_Projectile);
+    Sphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly); // <- 범인 1
+    Sphere->SetCollisionResponseToAllChannels(ECR_Ignore);
+    Sphere->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Overlap);
+    Sphere->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Overlap); // <- 범인 2
+    Sphere->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+    --- 삭제 또는 주석 처리 끝 --- */
+
+    // 대신 프로필 이름만 지정해주고, 구체적인 건 BP에서 'Custom'이나 'Projectile' 프리셋으로 제어합니다.
+    Sphere->SetCollisionProfileName(FName("Projectile"));
+
+    ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>("ProjectileMovement");
+    ProjectileMovement->InitialSpeed = 550.f;
+    ProjectileMovement->MaxSpeed = 550.f;
+    ProjectileMovement->ProjectileGravityScale = 0.f;
 }
 
 void AF1Projectile::SetHomingTarget(AActor* TargetActor)

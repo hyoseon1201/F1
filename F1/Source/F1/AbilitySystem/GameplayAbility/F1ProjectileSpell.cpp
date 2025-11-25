@@ -8,6 +8,8 @@
 #include "AbilitySystemComponent.h"
 #include "GameplayTag/F1GameplayTags.h"
 #include "GameFramework/ProjectileMovementComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "GameFramework/ProjectileMovementComponent.h"
 
 void UF1ProjectileSpell::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 	const FGameplayAbilityActorInfo* ActorInfo,
@@ -121,5 +123,77 @@ void UF1ProjectileSpell::SpawnHomingProjectile(AActor* HomingTarget)
 
 		// 5. 스폰 완료
 		Projectile->FinishSpawning(SpawnTransform);
+	}
+}
+
+void UF1ProjectileSpell::SpawnArcProjectile(const FVector& TargetLocation, float OverrideGravityZ)
+{
+	if (!GetAvatarActorFromActorInfo()->HasAuthority()) return;
+
+	IF1CombatInterface* CombatInterface = Cast<IF1CombatInterface>(GetAvatarActorFromActorInfo());
+	if (!CombatInterface) return;
+
+	const FVector SocketLocation = CombatInterface->GetCombatSocketLocation();
+
+	// 1. 발사 속도 벡터 계산
+	FVector OutLaunchVelocity = FVector::ZeroVector;
+	float TossSpeed = 1000.0f; // 던지는 힘 (투사체 BP의 Speed보다 우선됨)
+
+	// 언리얼이 제공하는 탄도학 계산 함수
+	bool bHaveSolution = UGameplayStatics::SuggestProjectileVelocity(
+		this,
+		OutLaunchVelocity,
+		SocketLocation,
+		TargetLocation,
+		TossSpeed,
+		false, // HighArc: false면 직사에 가까운 곡사, true면 높이 솟았다 떨어짐
+		0.0f,  // CollisionRadius
+		OverrideGravityZ,
+		ESuggestProjVelocityTraceOption::DoNotTrace // 트레이스 없이 수학적으로만 계산
+	);
+
+	if (bHaveSolution)
+	{
+		// 2. 계산된 방향으로 회전값 설정
+		FRotator Rotation = OutLaunchVelocity.Rotation();
+		FTransform SpawnTransform(Rotation, SocketLocation);
+
+		// 3. 지연 스폰
+		AF1Projectile* Projectile = GetWorld()->SpawnActorDeferred<AF1Projectile>(
+			ProjectileClass,
+			SpawnTransform,
+			GetOwningActorFromActorInfo(),
+			Cast<APawn>(GetOwningActorFromActorInfo()),
+			ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+
+		if (Projectile)
+		{
+			// [핵심] 계산된 속도를 투사체 무브먼트에 주입!
+			// 이렇게 해야 ProjectileMovement가 계산된 궤적대로 날아갑니다.
+			if (Projectile->ProjectileMovement)
+			{
+				Projectile->ProjectileMovement->Velocity = OutLaunchVelocity;
+			}
+
+			// --- 기존 데미지 설정 로직 (복붙) ---
+			const UAbilitySystemComponent* SourceASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetAvatarActorFromActorInfo());
+			FGameplayEffectContextHandle EffectContextHandle = SourceASC->MakeEffectContext();
+			EffectContextHandle.SetAbility(this);
+			EffectContextHandle.AddSourceObject(Projectile);
+			TArray<TWeakObjectPtr<AActor>> Actors;
+			Actors.Add(Projectile);
+			EffectContextHandle.AddActors(Actors);
+			FHitResult HitResult;
+			HitResult.Location = TargetLocation;
+			EffectContextHandle.AddHitResult(HitResult);
+
+			const FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(DamageEffectClass, GetAbilityLevel(), EffectContextHandle);
+			const float ScaledDamage = Damage.GetValueAtLevel(GetAbilityLevel());
+			UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, DamageType, ScaledDamage);
+			Projectile->DamageEffectSpecHandle = SpecHandle;
+			// ------------------------------------
+
+			Projectile->FinishSpawning(SpawnTransform);
+		}
 	}
 }

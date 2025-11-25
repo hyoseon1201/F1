@@ -27,4 +27,7 @@ protected:
 
 	UFUNCTION(BlueprintCallable, Category = "Projectile")
 	void SpawnHomingProjectile(AActor* HomingTarget);
+
+	UFUNCTION(BlueprintCallable, Category = "Projectile")
+	void SpawnArcProjectile(const FVector& TargetLocation, float OverrideGravityZ = 0.f);
 };
