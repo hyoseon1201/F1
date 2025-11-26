@@ -67,6 +67,13 @@ void AF1PlayerController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 
 void AF1PlayerController::StartMovementToDestination()
 {
+    if (GetASC())
+    {
+        FGameplayTagContainer CancelTags;
+        CancelTags.AddTag(FGameplayTag::RequestGameplayTag("Ability"));
+        GetASC()->CancelAbilities(&CancelTags);
+    }
+
     const APawn* ControlledPawn = GetPawn();
     if (!ControlledPawn) return;
 
@@ -188,6 +195,14 @@ void AF1PlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
     {
         if (GetASC()) GetASC()->AbilityInputTagHeld(InputTag);
         return;
+    }
+
+    if (GetASC())
+    {
+        FGameplayTagContainer CancelTags;
+        CancelTags.AddTag(FGameplayTag::RequestGameplayTag("Ability")); // 모든 어빌리티 취소
+
+        GetASC()->CancelAbilities(&CancelTags);
     }
 
     // RMB Held: 드래그 이동

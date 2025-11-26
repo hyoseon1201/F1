@@ -11,6 +11,7 @@
 #include "AbilitySystemComponent.h"
 #include "GenericTeamAgentInterface.h"
 #include "AbilitySystem/F1AttributeSet.h"
+#include "Engine/OverlapResult.h"
 
 AF1Projectile::AF1Projectile()
 {
@@ -67,6 +68,8 @@ void AF1Projectile::BeginPlay()
 	if (Sphere)
 	{
 		Sphere->OnComponentBeginOverlap.AddDynamic(this, &AF1Projectile::OnSphereOverlap);
+
+        Sphere->OnComponentHit.AddDynamic(this, &AF1Projectile::OnHit);
 	}
 }
 
@@ -133,4 +136,68 @@ void AF1Projectile::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AA
         // '나는 이미 터졌다'고 표시해두고 추가 충돌을 막습니다.
         bHit = true;
     }
+}
+
+void AF1Projectile::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+{
+    if (ImpactEffect)
+    {
+        UGameplayStatics::SpawnEmitterAtLocation(this, ImpactEffect, GetActorLocation());
+    }
+
+    // 2. 서버에서만 데미지 처리
+    if (!HasAuthority()) return;
+
+    // 3. 광역 데미지 (Sphere Overlap)
+    TArray<FOverlapResult> Overlaps;
+    FVector Origin = GetActorLocation();
+    float ExplosionRadius = 500.0f; // 폭발 반경 (필요시 변수로 빼세요)
+
+    FCollisionQueryParams Params;
+    Params.AddIgnoredActor(this); // 나 자신 무시
+    if (GetOwner()) Params.AddIgnoredActor(GetOwner()); // 쏜 사람 무시
+
+    // Pawn 채널만 감지
+    bool bHitFound = GetWorld()->OverlapMultiByObjectType(
+        Overlaps,
+        Origin,
+        FQuat::Identity,
+        FCollisionObjectQueryParams(ECC_Pawn),
+        FCollisionShape::MakeSphere(ExplosionRadius),
+        Params
+    );
+
+    if (bHitFound)
+    {
+        for (const FOverlapResult& Result : Overlaps)
+        {
+            if (AActor* TargetActor = Result.GetActor())
+            {
+                // 피아식별 로직 (기존 코드 재사용)
+                AActor* ProjectileOwner = GetOwner();
+                IGenericTeamAgentInterface* SourceTeamAgent = Cast<IGenericTeamAgentInterface>(ProjectileOwner);
+                IGenericTeamAgentInterface* TargetTeamAgent = Cast<IGenericTeamAgentInterface>(TargetActor);
+
+                if (SourceTeamAgent && TargetTeamAgent)
+                {
+                    if (SourceTeamAgent->GetGenericTeamId() == TargetTeamAgent->GetGenericTeamId())
+                    {
+                        continue; // 아군은 건너뜀
+                    }
+                }
+
+                // 데미지 적용 (기존 코드 재사용)
+                if (UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor))
+                {
+                    if (DamageEffectSpecHandle.Data.IsValid())
+                    {
+                        TargetASC->ApplyGameplayEffectSpecToSelf(*DamageEffectSpecHandle.Data.Get());
+                    }
+                }
+            }
+        }
+    }
+
+    // 4. 할 일 다 했으니 삭제
+    Destroy();
 }
