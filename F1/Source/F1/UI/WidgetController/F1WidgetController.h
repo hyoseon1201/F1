@@ -8,6 +8,7 @@
 
 class UAbilitySystemComponent;
 class UAttributeSet;
+class UF1AbilitySystemComponent;
 
 USTRUCT(BlueprintType)
 struct FWidgetControllerParams
@@ -44,6 +45,9 @@ public:
 
 	virtual void BroadcastInitialValues();
 	virtual void BindCallbacksToDependencies();
+
+	UFUNCTION(BlueprintCallable, Category = "WidgetController")
+	UF1AbilitySystemComponent* GetF1ASC();
 	
 protected:
 
@@ -58,4 +62,7 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, Category = "WidgetController")
 	TObjectPtr<UAttributeSet> AttributeSet;
+
+	UPROPERTY(BlueprintReadOnly, Category = "WidgetController")
+	TObjectPtr<UF1AbilitySystemComponent> F1AbilitySystemComponent;
 };

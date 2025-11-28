@@ -170,41 +170,32 @@ void FF1GameplayTags::InitializeNativeGameplayTags()
     );
 
     // ===========================================
-    // Ability Tags
+    // Ability Tags (스킬의 신원 - 구체적으로!)
     // ===========================================
-    GameplayTags.Ability_Q = Manager.AddNativeGameplayTag(
-        FName("Ability.Q"),
-        FString("Q ability")
+
+    GameplayTags.Ability_Attack_Melee = Manager.AddNativeGameplayTag(
+        FName("Ability.Attack.Melee"),
+        FString("Melee Basic Attack ability")
     );
 
-    GameplayTags.Ability_W = Manager.AddNativeGameplayTag(
-        FName("Ability.W"),
-        FString("W ability")
+    GameplayTags.Ability_Attack_Ranged = Manager.AddNativeGameplayTag(
+        FName("Ability.Attack.Ranged"),
+        FString("Ranged Basic Attack ability")
     );
 
-    GameplayTags.Ability_E = Manager.AddNativeGameplayTag(
-        FName("Ability.E"),
-        FString("E ability")
+    GameplayTags.Ability_Skill_ArcBolt = Manager.AddNativeGameplayTag(
+        FName("Ability.Skill.ArcBolt"),
+        FString("Dekker Q Skill ArcBolt ability")
     );
 
-    GameplayTags.Ability_R = Manager.AddNativeGameplayTag(
-        FName("Ability.R"),
-        FString("Ultimate ability")
+    GameplayTags.Ability_Skill_Haste = Manager.AddNativeGameplayTag(
+        FName("Ability.Skill.Haste"),
+        FString("Dekker W Skill Haste ability")
     );
 
-    GameplayTags.Ability_D = Manager.AddNativeGameplayTag(
-        FName("Ability.D"),
-        FString("Summoner Spell ability")
-    );
-
-    GameplayTags.Ability_F = Manager.AddNativeGameplayTag(
-        FName("Ability.F"),
-        FString("Summoner Spell ability")
-    );
-
-    GameplayTags.Ability_BasicAttack = Manager.AddNativeGameplayTag(
-        FName("Ability.BasicAttack"),
-        FString("Basic attack ability")
+    GameplayTags.Ability_Skill_SpawnDron = Manager.AddNativeGameplayTag(
+        FName("Ability.Skill.SpawnDron"),
+        FString("Dekker E Skill SpawnDron ability")
     );
 
     // ===========================================

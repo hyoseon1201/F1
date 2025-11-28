@@ -10,8 +10,8 @@
 #include "BehaviorTree/BlackboardComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "F1.h"
-#include <GameplayTag/F1GameplayTags.h>
-#include <UI/Widget/F1UserWidget.h>
+#include "GameplayTag/F1GameplayTags.h"
+#include "UI/Widget/F1UserWidget.h"
 #include "Components/WidgetComponent.h"
 
 AF1MonsterCharacter::AF1MonsterCharacter()
@@ -31,6 +31,8 @@ AF1MonsterCharacter::AF1MonsterCharacter()
 
     HealthBar = CreateDefaultSubobject<UWidgetComponent>("HealthBar");
     HealthBar->SetupAttachment(GetRootComponent());
+
+    AttackAbilityTag = FF1GameplayTags::Get().Ability_Attack_Melee; // BP에서 따로 설정
 }
 
 void AF1MonsterCharacter::PossessedBy(AController* NewController)
@@ -85,13 +87,9 @@ void AF1MonsterCharacter::SetCombatTarget(AActor* InTarget)
 
 void AF1MonsterCharacter::Attack()
 {
-    const FF1GameplayTags& GameplayTags = FF1GameplayTags::Get();
-
-    FGameplayTag AttackTag = GameplayTags.Ability_BasicAttack;
-
     if (AbilitySystemComponent)
     {
-        AbilitySystemComponent->TryActivateAbilitiesByTag(FGameplayTagContainer(AttackTag));
+        AbilitySystemComponent->TryActivateAbilitiesByTag(FGameplayTagContainer(AttackAbilityTag));
     }
 }
 

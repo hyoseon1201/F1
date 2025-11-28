@@ -72,15 +72,16 @@ public:
     FGameplayTag State_Invulnerable;
 
     // ===========================================
-    // Ability Tags
+    // Ability Tags (스킬의 신원 - 구체적으로!)
     // ===========================================
-    FGameplayTag Ability_Q;
-    FGameplayTag Ability_W;
-    FGameplayTag Ability_E;
-    FGameplayTag Ability_R;
-    FGameplayTag Ability_D;
-    FGameplayTag Ability_F;
-    FGameplayTag Ability_BasicAttack;
+    // [공통]
+    FGameplayTag Ability_Attack_Melee; // 근접 평타
+    FGameplayTag Ability_Attack_Ranged; // 원거리 평타
+
+    // [마법사 캐릭터 (예: Gideon)]
+    FGameplayTag Ability_Skill_ArcBolt;    // Q
+    FGameplayTag Ability_Skill_Haste;   // W
+    FGameplayTag Ability_Skill_SpawnDron;  // E
 
     // ===========================================
     // Input Tags

@@ -65,6 +65,19 @@ void UF1AbilitySystemComponent::AbilityInputTagReleased(const FGameplayTag& Inpu
 	}
 }
 
+void UF1AbilitySystemComponent::ForEachAbility(const TFunctionRef<bool(const FGameplayAbilitySpec&)>& Func)
+{
+	FScopedAbilityListLock ActiveScopeLock(*this);
+	for (const FGameplayAbilitySpec& AbilitySpec : ActivatableAbilities.Items)
+	{
+		// Delegate.ExecuteIfBound 대신 그냥 함수처럼 호출
+		if (Func(AbilitySpec))
+		{
+			// ...
+		}
+	}
+}
+
 void UF1AbilitySystemComponent::ClientEffectApplied_Implementation(UAbilitySystemComponent* AbilitySystemComponent, const FGameplayEffectSpec& EffectSpec, FActiveGameplayEffectHandle ActiveEffectHandle)
 {
 	FGameplayTagContainer TagContainer;

@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Character/F1CharacterBase.h"
+#include "GameplayTagContainer.h"
 #include "F1MonsterCharacter.generated.h"
 
 class UWidgetComponent;
@@ -34,6 +35,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	float DefaultAttackRange = 150.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+	FGameplayTag AttackAbilityTag;
 
 	// ===========================================
 	// Combat Interface
