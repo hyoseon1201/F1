@@ -17,6 +17,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnNameChangeSignature, const FStrin
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FAbilityInfoSignature, const FF1AbilityInfo&, Info);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCooldownChangeSignature, FGameplayTag, AbilityTag, float, TimeRemaining);
 
+struct FGameplayEffectSpec;
+struct FActiveGameplayEffectHandle;
+
 /**
  * 영웅 캐릭터(플레이어) 전용 UI 컨트롤러
  * 체력, 마나, 레벨, 스킬 아이콘, 스킬 쿨타임 정보를 관리합니다.
@@ -66,6 +69,8 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Widget Data")
 	TObjectPtr<class UF1AbilityData> AbilityInfo;
 
-	// [추가] 쿨타임 태그가 변했을 때 호출될 콜백 함수
+	// 쿨타임 태그가 변했을 때 호출될 콜백 함수
 	void OnAbilityTagsChanged(const FGameplayTag CallbackTag, int32 NewCount);
+
+	void OnActiveGameplayEffectAdded(UAbilitySystemComponent* Target, const FGameplayEffectSpec& SpecApplied, FActiveGameplayEffectHandle ActiveEffectHandle);
 };

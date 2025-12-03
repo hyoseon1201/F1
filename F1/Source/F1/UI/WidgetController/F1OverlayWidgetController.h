@@ -1,19 +1,15 @@
-// Fill out your copyright notice in the Description page of Project Settings.
 #pragma once
 
 #include "CoreMinimal.h"
-#include "UI/WidgetController/F1WidgetController.h"
+#include "UI/WidgetController/F1HeroWidgetController.h"
 #include "F1OverlayWidgetController.generated.h"
 
-struct FOnAttributeChangeData;
+// FOnAttributeChangedSignature 선언은 부모나 F1WidgetController로 옮기는 게 좋습니다. 
+// 여기서는 중복 정의를 피하기 위해 그대로 두거나 재사용합니다.
+// (이미 정의되어 있다면 지우셔도 됩니다.)
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAttributeChangedSignature, float, NewValue);
-
-/**
- *
- */
 UCLASS(BlueprintType, Blueprintable)
-class F1_API UF1OverlayWidgetController : public UF1WidgetController
+class F1_API UF1OverlayWidgetController : public UF1HeroWidgetController
 {
 	GENERATED_BODY()
 
@@ -21,17 +17,8 @@ public:
 	virtual void BroadcastInitialValues() override;
 	virtual void BindCallbacksToDependencies() override;
 
-	UPROPERTY(BlueprintAssignable, Category = "GAS|Attributes")
-	FOnAttributeChangedSignature OnHealthChanged;
-
-	UPROPERTY(BlueprintAssignable, Category = "GAS|Attributes")
-	FOnAttributeChangedSignature OnMaxHealthChanged;
-
-	UPROPERTY(BlueprintAssignable, Category = "GAS|Attributes")
-	FOnAttributeChangedSignature OnManaChanged;
-
-	UPROPERTY(BlueprintAssignable, Category = "GAS|Attributes")
-	FOnAttributeChangedSignature OnMaxManaChanged;
+	// [중복 삭제] 체력, 마나 등은 부모가 가지고 있으므로 여기선 지웁니다.
+	// 오직 Overlay만의 추가 스탯들만 남깁니다.
 
 	UPROPERTY(BlueprintAssignable, Category = "GAS|Attributes")
 	FOnAttributeChangedSignature OnHealthRegenerationChanged;

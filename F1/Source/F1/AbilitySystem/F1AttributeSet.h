@@ -197,6 +197,10 @@ public:
 	FGameplayAttributeData MaxExperience;
 	ATTRIBUTE_ACCESSORS(UF1AttributeSet, MaxExperience);
 
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_Gold, Category = "Vital Attributes")
+	FGameplayAttributeData Gold;
+	ATTRIBUTE_ACCESSORS(UF1AttributeSet, Gold);
+
 public:
 
 	UF1AttributeSet();
@@ -289,6 +293,9 @@ public:
 
 	UFUNCTION()
 	void OnRep_MaxExperience(const FGameplayAttributeData& OldMaxExperience) const;
+
+	UFUNCTION()
+	void OnRep_Gold(const FGameplayAttributeData& OldGold) const;
 
 private:
 	void SetEffectProperties(const FGameplayEffectModCallbackData& Data, FEffectProperties& Props) const;

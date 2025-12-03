@@ -43,6 +43,9 @@ protected:
 	// Combat Interface
 	// ===========================================
 public:
+	virtual int32 GetRewardXP_Implementation() override;
+	virtual int32 GetRewardGold_Implementation() override;
+
 	virtual void Die() override;
 	virtual void SetCombatTarget(AActor* InTarget) override;
 	virtual void Attack() override;
@@ -51,6 +54,12 @@ public:
 protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Combat")
 	TObjectPtr<AActor> CombatTarget;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Reward")
+	int32 RewardXP = 50;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Reward")
+	int32 RewardGold = 100;
 
 	// ===========================================
 	// AI

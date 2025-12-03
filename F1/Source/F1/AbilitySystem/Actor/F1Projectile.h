@@ -34,8 +34,12 @@ protected:
 	UFUNCTION()
 	void OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
+	// 지면에 닿으면 폭발후 광역데미지 주는 함수
 	UFUNCTION()
 	void OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
+
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastSpawnImpactEffect(FVector Location, FVector Scale);
 
 private:
 	UPROPERTY(EditDefaultsOnly)

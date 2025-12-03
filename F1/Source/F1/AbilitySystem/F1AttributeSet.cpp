@@ -11,6 +11,7 @@
 #include "Kismet/GameplayStatics.h"
 #include <Game/F1PlayerController.h>
 #include "F1AbilitySystemLibrary.h"
+#include "Interaction/F1CombatInterface.h"
 
 UF1AttributeSet::UF1AttributeSet()
 {
@@ -66,6 +67,7 @@ void UF1AttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, CharacterLevel, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, Experience, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, MaxExperience, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, Gold, COND_None, REPNOTIFY_Always);
 
 }
 
@@ -85,8 +87,24 @@ void UF1AttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, fl
 
 void UF1AttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data)
 {
+	Super::PostGameplayEffectExecute(Data);
+
 	FEffectProperties Props;
 	SetEffectProperties(Data, Props);
+
+	// ==================================================
+	// [디버깅] 경험치나 골드가 변했는지 확인하는 로그 (추가!)
+	// ==================================================
+	if (Data.EvaluatedData.Attribute == GetExperienceAttribute())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("!!! Experience Updated !!! New Value: %f"), GetExperience());
+	}
+
+	if (Data.EvaluatedData.Attribute == GetGoldAttribute())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("!!! Gold Updated !!! New Value: %f"), GetGold());
+	}
+	// ==================================================
 
 	if (Data.EvaluatedData.Attribute == GetMovementSpeedAttribute())
 	{
@@ -132,7 +150,29 @@ void UF1AttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 
 				if (bFatal)
 				{
-					CombatInterface->Die();
+					// [핵심] 사망 판정이 났을 때!
+					UE_LOG(LogTemp, Error, TEXT("[AttributeSet] Monster DIED! calling GiveReward..."));
+
+					// 0. 킬러와 희생자 식별
+					AActor* Killer = Props.SourceAvatarActor;
+					AActor* Victim = Props.TargetAvatarActor;
+
+					// 1. Victim을 CharacterBase로 캐스팅해서 보상 GE 클래스를 가져옴
+					TSubclassOf<UGameplayEffect> RewardClass = nullptr;
+					if (AF1CharacterBase* VictimChar = Cast<AF1CharacterBase>(Victim))
+					{
+						RewardClass = VictimChar->GetKillRewardEffectClass();
+					}
+
+					// 2. 보상 지급 함수 호출
+					// (RewardClass가 null이면 함수 내부에서 걸러짐)
+					UF1AbilitySystemLibrary::GiveReward(Killer, Victim, RewardClass);
+
+					// 3. 사망 처리
+					if (CombatInterface)
+					{
+						CombatInterface->Die(); // 이제 죽어라!
+					}
 				}
 			}
 
@@ -289,11 +329,42 @@ void UF1AttributeSet::OnRep_CharacterLevel(const FGameplayAttributeData& OldChar
 void UF1AttributeSet::OnRep_Experience(const FGameplayAttributeData& OldExperience) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UF1AttributeSet, Experience, OldExperience);
+
+	// [디버깅] 현재 값 - 이전 값 = 획득량
+	float CurrentXP = GetExperience();
+	float OldXP = OldExperience.GetCurrentValue();
+	float DeltaXP = CurrentXP - OldXP;
+
+	if (DeltaXP > 0.f)
+	{
+		// 화면에 띄우기 (초록색)
+		GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green,
+			FString::Printf(TEXT("Client: Gained %f XP! (Total: %f)"), DeltaXP, CurrentXP));
+
+		// 로그창에 남기기
+		UE_LOG(LogTemp, Warning, TEXT("[Client] OnRep_Experience: +%f (Total: %f)"), DeltaXP, CurrentXP);
+	}
 }
 
 void UF1AttributeSet::OnRep_MaxExperience(const FGameplayAttributeData& OldMaxExperience) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UF1AttributeSet, MaxExperience, OldMaxExperience);
+}
+
+void UF1AttributeSet::OnRep_Gold(const FGameplayAttributeData& OldGold) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UF1AttributeSet, Gold, OldGold);
+
+	float CurrentGold = GetGold();
+	float OldGoldVal = OldGold.GetCurrentValue();
+	float DeltaGold = CurrentGold - OldGoldVal;
+
+	if (DeltaGold > 0.f)
+	{
+		// 화면에 띄우기 (노란색)
+		GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Yellow,
+			FString::Printf(TEXT("Client: Gained %f Gold! (Total: %f)"), DeltaGold, CurrentGold));
+	}
 }
 
 void UF1AttributeSet::SetEffectProperties(const FGameplayEffectModCallbackData& Data, FEffectProperties& Props) const

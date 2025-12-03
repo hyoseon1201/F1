@@ -198,6 +198,41 @@ void FF1GameplayTags::InitializeNativeGameplayTags()
         FString("Dekker E Skill SpawnDron ability")
     );
 
+    GameplayTags.Ability_Skill_MeteorShower = Manager.AddNativeGameplayTag(
+        FName("Ability.Skill.MeteorShower"),
+        FString("Dekker R Ultimate Skill MeteorShower")
+    );
+
+    // ===========================================
+    // Cooldown Tags (추가 필수! Ability 태그와 1:1 대응)
+    // ===========================================
+
+    // 평타 공용 쿨타임 (공격 속도 제한용)
+    GameplayTags.Cooldown_Attack = Manager.AddNativeGameplayTag(
+        FName("Cooldown.Attack"),
+        FString("Global Cooldown for Basic Attacks (Based on Attack Speed)")
+    );
+
+    GameplayTags.Cooldown_Skill_ArcBolt = Manager.AddNativeGameplayTag(
+        FName("Cooldown.Skill.ArcBolt"),
+        FString("Cooldown for Dekker Q Skill ArcBolt")
+    );
+
+    GameplayTags.Cooldown_Skill_Haste = Manager.AddNativeGameplayTag(
+        FName("Cooldown.Skill.Haste"),
+        FString("Cooldown for Dekker W Skill Haste")
+    );
+
+    GameplayTags.Cooldown_Skill_SpawnDron = Manager.AddNativeGameplayTag(
+        FName("Cooldown.Skill.SpawnDron"),
+        FString("Cooldown for Dekker E Skill SpawnDron")
+    );
+
+    GameplayTags.Cooldown_Skill_MeteorShower = Manager.AddNativeGameplayTag(
+        FName("Cooldown.Skill.MeteorShower"),
+        FString("Cooldown for Dekker R Skill MeteorShower")
+    );
+
     // ===========================================
     // Input Tags
     // ===========================================
@@ -292,5 +327,19 @@ void FF1GameplayTags::InitializeNativeGameplayTags()
     GameplayTags.DamageType_True = Manager.AddNativeGameplayTag(
         FName("DamageType.True"),
         FString("True damage type")
+    );
+
+    // ===========================================
+    // Reward Tags (SetByCaller용)
+    // ===========================================
+
+    GameplayTags.Attributes_Meta_Experience = Manager.AddNativeGameplayTag(
+        FName("Attributes.Meta.Experience"),
+        FString("Tag for setting Experience reward amount")
+    );
+
+    GameplayTags.Attributes_Meta_Gold = Manager.AddNativeGameplayTag(
+        FName("Attributes.Meta.Gold"),
+        FString("Tag for setting Gold reward amount")
     );
 }

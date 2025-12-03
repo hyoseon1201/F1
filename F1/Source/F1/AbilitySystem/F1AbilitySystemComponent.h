@@ -9,13 +9,12 @@
 DECLARE_MULTICAST_DELEGATE_OneParam(FEffectAssetTags, const FGameplayTagContainer& /*AssetTags*/);
 
 /**
- * 
- */
+ * */
 UCLASS()
 class F1_API UF1AbilitySystemComponent : public UAbilitySystemComponent
 {
 	GENERATED_BODY()
-	
+
 public:
 	FEffectAssetTags EffectAssetTags;
 
@@ -26,6 +25,9 @@ public:
 	void AbilityInputTagReleased(const FGameplayTag& InputTag);
 
 	void ForEachAbility(const TFunctionRef<bool(const FGameplayAbilitySpec&)>& Func);
+
+	// [추가 3] 헬퍼 함수: 특정 태그를 가진 이펙트들의 남은 시간 반환
+	TArray<float> GetActiveEffectsTimeRemaining(const FGameplayEffectQuery& Query) const;
 
 protected:
 	UFUNCTION(Client, Reliable)

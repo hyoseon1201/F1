@@ -69,6 +69,16 @@ void AF1MonsterCharacter::InitAbilityActorInfo()
     }
 }
 
+int32 AF1MonsterCharacter::GetRewardXP_Implementation()
+{
+    return RewardXP;
+}
+
+int32 AF1MonsterCharacter::GetRewardGold_Implementation()
+{
+    return RewardGold;
+}
+
 void AF1MonsterCharacter::Die()
 {
 	SetLifeSpan(LifeSpan);

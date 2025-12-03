@@ -1,6 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "AbilitySystem/F1AbilitySystemComponent.h"
 #include "AbilitySystem/GameplayAbility/F1GameplayAbility.h"
 
@@ -39,7 +38,6 @@ void UF1AbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& Input
 	}
 }
 
-
 void UF1AbilitySystemComponent::AbilityInputTagHeld(const FGameplayTag& InputTag)
 {
 	if (!InputTag.IsValid()) return;
@@ -50,7 +48,6 @@ void UF1AbilitySystemComponent::AbilityInputTagHeld(const FGameplayTag& InputTag
 		{
 			AbilitySpecInputPressed(AbilitySpec);
 			if (!AbilitySpec.IsActive()) TryActivateAbility(AbilitySpec.Handle);
-
 		}
 	}
 }
@@ -76,6 +73,27 @@ void UF1AbilitySystemComponent::ForEachAbility(const TFunctionRef<bool(const FGa
 			// ...
 		}
 	}
+}
+
+// [핵심 추가] 헬퍼 함수 구현
+TArray<float> UF1AbilitySystemComponent::GetActiveEffectsTimeRemaining(const FGameplayEffectQuery& Query) const
+{
+	TArray<float> Times;
+
+	// 쿼리에 맞는 활성 이펙트 핸들 가져오기
+	TArray<FActiveGameplayEffectHandle> ActiveEffects = GetActiveEffects(Query);
+
+	for (const FActiveGameplayEffectHandle& Handle : ActiveEffects)
+	{
+		const FActiveGameplayEffect* Effect = GetActiveGameplayEffect(Handle);
+		if (Effect)
+		{
+			// 현재 시간 기준으로 남은 시간 계산
+			float Remaining = Effect->GetTimeRemaining(GetWorld()->GetTimeSeconds());
+			Times.Add(Remaining);
+		}
+	}
+	return Times;
 }
 
 void UF1AbilitySystemComponent::ClientEffectApplied_Implementation(UAbilitySystemComponent* AbilitySystemComponent, const FGameplayEffectSpec& EffectSpec, FActiveGameplayEffectHandle ActiveEffectHandle)

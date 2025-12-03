@@ -11,52 +11,33 @@
 #include "AbilitySystemComponent.h"
 #include "GenericTeamAgentInterface.h"
 #include "AbilitySystem/F1AttributeSet.h"
-#include "Engine/OverlapResult.h"
+#include "Engine/OverlapResult.h" // 필수
 
 AF1Projectile::AF1Projectile()
 {
-    PrimaryActorTick.bCanEverTick = false;
-    bReplicates = true;
+	PrimaryActorTick.bCanEverTick = false;
+	bReplicates = true;
 
-    Sphere = CreateDefaultSubobject<USphereComponent>("Sphere");
-    SetRootComponent(Sphere);
+	Sphere = CreateDefaultSubobject<USphereComponent>("Sphere");
+	SetRootComponent(Sphere);
 
-    // [수정] 아래 하드코딩된 설정들을 모두 지우거나 주석 처리하세요!
-    // 이유: 자식 BP(곡사포)가 'QueryAndPhysics'와 'Block'을 쓰고 싶은데,
-    // 부모가 'QueryOnly'와 'Overlap'을 강요하고 있어서 충돌이 무시됨.
+	// 충돌 프로필 설정 (BP에서 Custom 설정을 따르도록 함)
+	Sphere->SetCollisionProfileName(FName("Projectile"));
 
-    /* --- 삭제 또는 주석 처리 시작 ---
-    Sphere->SetCollisionObjectType(ECC_Projectile);
-    Sphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly); // <- 범인 1
-    Sphere->SetCollisionResponseToAllChannels(ECR_Ignore);
-    Sphere->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Overlap);
-    Sphere->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Overlap); // <- 범인 2
-    Sphere->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
-    --- 삭제 또는 주석 처리 끝 --- */
-
-    // 대신 프로필 이름만 지정해주고, 구체적인 건 BP에서 'Custom'이나 'Projectile' 프리셋으로 제어합니다.
-    Sphere->SetCollisionProfileName(FName("Projectile"));
-
-    ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>("ProjectileMovement");
-    ProjectileMovement->InitialSpeed = 550.f;
-    ProjectileMovement->MaxSpeed = 550.f;
-    ProjectileMovement->ProjectileGravityScale = 0.f;
+	ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>("ProjectileMovement");
+	ProjectileMovement->InitialSpeed = 550.f;
+	ProjectileMovement->MaxSpeed = 550.f;
+	ProjectileMovement->ProjectileGravityScale = 0.f;
 }
 
 void AF1Projectile::SetHomingTarget(AActor* TargetActor)
 {
-    if (TargetActor && ProjectileMovement)
-    {
-        // 1. 유도 기능 활성화
-        ProjectileMovement->bIsHomingProjectile = true;
-
-        // 2. 유도 가속도 설정 (이게 높아야 확 꺾어서 쫓아갑니다)
-        // 블루프린트에서 설정한 값을 덮어쓸 수도 있으니, 필요하면 이 줄은 주석 처리하고 BP에서 조절하세요.
-        ProjectileMovement->HomingAccelerationMagnitude = 20000.f;
-
-        // 3. [핵심] 누구를 쫓아갈지 설정 (타겟의 뿌리 컴포넌트)
-        ProjectileMovement->HomingTargetComponent = TargetActor->GetRootComponent();
-    }
+	if (TargetActor && ProjectileMovement)
+	{
+		ProjectileMovement->bIsHomingProjectile = true;
+		ProjectileMovement->HomingAccelerationMagnitude = 20000.f;
+		ProjectileMovement->HomingTargetComponent = TargetActor->GetRootComponent();
+	}
 }
 
 void AF1Projectile::BeginPlay()
@@ -68,136 +49,153 @@ void AF1Projectile::BeginPlay()
 	if (Sphere)
 	{
 		Sphere->OnComponentBeginOverlap.AddDynamic(this, &AF1Projectile::OnSphereOverlap);
-
-        Sphere->OnComponentHit.AddDynamic(this, &AF1Projectile::OnHit);
+		Sphere->OnComponentHit.AddDynamic(this, &AF1Projectile::OnHit);
 	}
 }
 
 void AF1Projectile::Destroyed()
 {
+	// 직사(Overlap)로 터졌을 때 클라이언트 이펙트 처리 (기존 유지)
 	if (!bHit && !HasAuthority())
 	{
-		UGameplayStatics::SpawnEmitterAtLocation(this, ImpactEffect, GetActorLocation());
+		if (ImpactEffect)
+		{
+			UGameplayStatics::SpawnEmitterAtLocation(this, ImpactEffect, GetActorLocation());
+		}
 	}
 	Super::Destroyed();
 }
 
-void AF1Projectile::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-    UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+void AF1Projectile::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-    // 1. 유효성 검사 (공통)
-    AActor* ProjectileOwner = GetOwner();
-    if (!ProjectileOwner) return;
-    if (OtherActor == ProjectileOwner) return; // 내가 쏜 것에 내가 맞지 않게 (옵션)
+	// 직사 공격 로직 (기존 코드 유지)
+	AActor* ProjectileOwner = GetOwner();
+	if (!ProjectileOwner) return;
+	if (OtherActor == ProjectileOwner) return;
 
-    // 2. 이미 맞았는지 체크 (클라이언트 중복 재생 방지)
-    if (bHit) return;
+	if (bHit) return;
 
-    // 3. 팀 체크 (공통 - 클라이언트도 팀 정보를 알아야 함)
-    // 주의: PlayerState나 Character의 TeamID가 리플리케이션 되고 있어야 정상 동작합니다.
-    IGenericTeamAgentInterface* SourceTeamAgent = Cast<IGenericTeamAgentInterface>(ProjectileOwner);
-    IGenericTeamAgentInterface* TargetTeamAgent = Cast<IGenericTeamAgentInterface>(OtherActor);
+	IGenericTeamAgentInterface* SourceTeamAgent = Cast<IGenericTeamAgentInterface>(ProjectileOwner);
+	IGenericTeamAgentInterface* TargetTeamAgent = Cast<IGenericTeamAgentInterface>(OtherActor);
 
-    if (SourceTeamAgent && TargetTeamAgent)
-    {
-        if (SourceTeamAgent->GetGenericTeamId() == TargetTeamAgent->GetGenericTeamId())
-        {
-            return; // 같은 팀이면 그냥 통과하거나 무시
-        }
-    }
+	if (SourceTeamAgent && TargetTeamAgent)
+	{
+		if (SourceTeamAgent->GetGenericTeamId() == TargetTeamAgent->GetGenericTeamId())
+		{
+			return;
+		}
+	}
 
-    // 4. [시각 효과] 권한과 상관없이 모두 수행 (서버 + 클라이언트)
-    // 여기서 소리와 이펙트를 재생해야 클라이언트 눈에 보입니다.
-    if (ImpactEffect)
-    {
-        UGameplayStatics::SpawnEmitterAtLocation(this, ImpactEffect, GetActorLocation());
-    }
+	if (ImpactEffect)
+	{
+		UGameplayStatics::SpawnEmitterAtLocation(this, ImpactEffect, GetActorLocation());
+	}
 
-    // (옵션) 사운드 재생
-    // UGameplayStatics::PlaySoundAtLocation(this, ImpactSound, GetActorLocation());
-
-
-    // 5. [서버 로직] 데미지 및 파괴 처리
-    if (HasAuthority())
-    {
-        if (UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OtherActor))
-        {
-            if (DamageEffectSpecHandle.Data.IsValid())
-            {
-                TargetASC->ApplyGameplayEffectSpecToSelf(*DamageEffectSpecHandle.Data.Get());
-            }
-        }
-
-        Destroy();
-    }
-    else
-    {
-        // 클라이언트는 서버가 Destroy() 하기 전까지 잠시 살아있을 수 있으므로,
-        // '나는 이미 터졌다'고 표시해두고 추가 충돌을 막습니다.
-        bHit = true;
-    }
+	if (HasAuthority())
+	{
+		if (UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OtherActor))
+		{
+			if (DamageEffectSpecHandle.Data.IsValid())
+			{
+				TargetASC->ApplyGameplayEffectSpecToSelf(*DamageEffectSpecHandle.Data.Get());
+			}
+		}
+		Destroy();
+	}
+	else
+	{
+		bHit = true;
+	}
 }
 
 void AF1Projectile::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
-    if (ImpactEffect)
-    {
-        UGameplayStatics::SpawnEmitterAtLocation(this, ImpactEffect, GetActorLocation());
-    }
+	// [중요] Hit 이벤트는 서버에서만 처리하고 결과를 전파합니다.
+	if (!HasAuthority()) return;
 
-    // 2. 서버에서만 데미지 처리
-    if (!HasAuthority()) return;
+	// 1. 이펙트 위치 및 스케일 계산 (서버가 결정)
+	FVector EffectLocation = GetActorLocation() + FVector(0.f, 0.f, 50.f);
+	FVector EffectScale = FVector(0.2f);
 
-    // 3. 광역 데미지 (Sphere Overlap)
-    TArray<FOverlapResult> Overlaps;
-    FVector Origin = GetActorLocation();
-    float ExplosionRadius = 500.0f; // 폭발 반경 (필요시 변수로 빼세요)
+	// 2. 모든 클라이언트에게 "이 위치, 이 크기로 터뜨려라" 명령
+	MulticastSpawnImpactEffect(EffectLocation, EffectScale);
 
-    FCollisionQueryParams Params;
-    Params.AddIgnoredActor(this); // 나 자신 무시
-    if (GetOwner()) Params.AddIgnoredActor(GetOwner()); // 쏜 사람 무시
+	// 3. 광역 데미지 처리
+	TArray<FOverlapResult> Overlaps;
+	FVector Origin = GetActorLocation();
+	float ExplosionRadius = 200.0f;
 
-    // Pawn 채널만 감지
-    bool bHitFound = GetWorld()->OverlapMultiByObjectType(
-        Overlaps,
-        Origin,
-        FQuat::Identity,
-        FCollisionObjectQueryParams(ECC_Pawn),
-        FCollisionShape::MakeSphere(ExplosionRadius),
-        Params
-    );
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+	if (GetOwner()) Params.AddIgnoredActor(GetOwner());
 
-    if (bHitFound)
-    {
-        for (const FOverlapResult& Result : Overlaps)
-        {
-            if (AActor* TargetActor = Result.GetActor())
-            {
-                // 피아식별 로직 (기존 코드 재사용)
-                AActor* ProjectileOwner = GetOwner();
-                IGenericTeamAgentInterface* SourceTeamAgent = Cast<IGenericTeamAgentInterface>(ProjectileOwner);
-                IGenericTeamAgentInterface* TargetTeamAgent = Cast<IGenericTeamAgentInterface>(TargetActor);
+	bool bHitFound = GetWorld()->OverlapMultiByObjectType(
+		Overlaps,
+		Origin,
+		FQuat::Identity,
+		FCollisionObjectQueryParams(ECC_Pawn),
+		FCollisionShape::MakeSphere(ExplosionRadius),
+		Params
+	);
 
-                if (SourceTeamAgent && TargetTeamAgent)
-                {
-                    if (SourceTeamAgent->GetGenericTeamId() == TargetTeamAgent->GetGenericTeamId())
-                    {
-                        continue; // 아군은 건너뜀
-                    }
-                }
+	if (bHitFound)
+	{
+		for (const FOverlapResult& Result : Overlaps)
+		{
+			if (AActor* TargetActor = Result.GetActor())
+			{
+				AActor* ProjectileOwner = GetOwner();
+				IGenericTeamAgentInterface* SourceTeamAgent = Cast<IGenericTeamAgentInterface>(ProjectileOwner);
+				IGenericTeamAgentInterface* TargetTeamAgent = Cast<IGenericTeamAgentInterface>(TargetActor);
 
-                // 데미지 적용 (기존 코드 재사용)
-                if (UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor))
-                {
-                    if (DamageEffectSpecHandle.Data.IsValid())
-                    {
-                        TargetASC->ApplyGameplayEffectSpecToSelf(*DamageEffectSpecHandle.Data.Get());
-                    }
-                }
-            }
-        }
-    }
+				if (SourceTeamAgent && TargetTeamAgent)
+				{
+					if (SourceTeamAgent->GetGenericTeamId() == TargetTeamAgent->GetGenericTeamId())
+					{
+						continue; // 아군은 패스
+					}
+				}
 
-    // 4. 할 일 다 했으니 삭제
-    Destroy();
+				if (UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor))
+				{
+					if (DamageEffectSpecHandle.Data.IsValid())
+					{
+						TargetASC->ApplyGameplayEffectSpecToSelf(*DamageEffectSpecHandle.Data.Get());
+					}
+				}
+			}
+		}
+	}
+
+	// 4. 삭제 (네트워크 지연을 고려해 약간의 유예를 둠)
+	SetLifeSpan(3.0f);
+
+	if (Sphere) Sphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	SetActorHiddenInGame(true);
+}
+
+void AF1Projectile::MulticastSpawnImpactEffect_Implementation(FVector Location, FVector Scale)
+{
+	// [핵심 추가] 클라이언트에게 "나 이미 맞았어"라고 알려줌
+	// 이걸 해줘야 나중에 Destroyed()가 호출될 때 중복 재생을 안 함.
+	bHit = true;
+
+	// [추가 팁] 클라이언트에서도 즉시 숨겨버려서 반응성을 높임
+	// (서버에서 Hidden을 해도 리플리케이션 딜레이가 있을 수 있으므로)
+	SetActorHiddenInGame(true);
+	if (Sphere) Sphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	// [모든 클라이언트 실행] 서버가 준 위치와 크기로 이펙트 재생
+	if (ImpactEffect)
+	{
+		UGameplayStatics::SpawnEmitterAtLocation(
+			this,
+			ImpactEffect,
+			Location,
+			FRotator::ZeroRotator,
+			Scale
+		);
+
+		// (필요시 사운드 재생 코드 추가)
+	}
 }

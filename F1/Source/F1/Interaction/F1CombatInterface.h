@@ -31,8 +31,14 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Combat")
 	AActor* GetCombatTarget() const;
 
-	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Combat")
 	void UpdateFacingTarget(const FVector& Target);
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Combat|Reward")
+	int32 GetRewardXP();
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Combat|Reward")
+	int32 GetRewardGold();
 
 	virtual void Die() = 0;
 	virtual void SetCombatTarget(AActor* InTarget) = 0;

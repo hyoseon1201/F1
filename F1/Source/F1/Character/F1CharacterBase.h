@@ -65,6 +65,9 @@ public:
 
     virtual FVector GetCombatSocketLocation() override;
     virtual AActor* GetCombatTarget_Implementation() const override;
+    virtual int32 GetRewardXP_Implementation() override;
+    virtual int32 GetRewardGold_Implementation() override;
+
     virtual void Die() override;
     virtual void SetCombatTarget(AActor* InTarget) override;
     virtual void Attack() override;
@@ -88,7 +91,14 @@ protected:
     UPROPERTY(BlueprintReadOnly, Category = "Combat|Sockets")
     FName ChestSocketName = FName("Chest");
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Reward")
+    TSubclassOf<UGameplayEffect> KillRewardEffectClass;
+
     virtual void UpdateCombatSocketsFromCharacterInfo();
+
+public:
+    UFUNCTION(BlueprintCallable, Category = "Combat|Reward")
+    TSubclassOf<UGameplayEffect> GetKillRewardEffectClass() const { return KillRewardEffectClass; }
 
     // ===========================================
     // GAS

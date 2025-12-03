@@ -9,6 +9,8 @@
 #include <F1AbilityTypes.h>
 #include <Character/F1CharacterBase.h>
 #include "F1AbilitySystemComponent.h"
+#include <AbilitySystemBlueprintLibrary.h>
+#include <GameplayTag/F1GameplayTags.h>
 
 UF1OverlayWidgetController* UF1AbilitySystemLibrary::GetOverlayWidgetController(const UObject* WorldContextObject)
 {
@@ -60,6 +62,51 @@ void UF1AbilitySystemLibrary::AddCharacterAbilities(AActor* TargetActor)
 	{
 		F1ASC->AddCharacterAbilities(StartupAbilities);
 	}
+}
+
+void UF1AbilitySystemLibrary::GiveReward(AActor* Killer, AActor* Victim, TSubclassOf<UGameplayEffect> RewardGEClass)
+{
+    UE_LOG(LogTemp, Warning, TEXT("[GiveReward] Called. Killer: %s, Victim: %s"), *GetNameSafe(Killer), *GetNameSafe(Victim));
+    if (!Killer || !Victim || !RewardGEClass)
+    {
+        UE_LOG(LogTemp, Error, TEXT("[GiveReward] FAILED: Missing Actor or GE Class"));
+        return;
+    }
+
+    // 1. 죽은 놈(Victim)에게서 보상 정보(XP, Gold)를 뜯어냅니다.
+    // (인터페이스 함수 호출)
+    int32 XP = 0;
+    int32 Gold = 0;
+
+    if (Victim->Implements<UF1CombatInterface>())
+    {
+        XP = IF1CombatInterface::Execute_GetRewardXP(Victim);
+        Gold = IF1CombatInterface::Execute_GetRewardGold(Victim);
+    }
+
+    UE_LOG(LogTemp, Warning, TEXT("[GiveReward] Amount -> XP: %d, Gold: %d"), XP, Gold);
+    // 2. 죽인 놈(Killer)의 ASC를 가져옵니다.
+    UAbilitySystemComponent* KillerASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Killer);
+    if (!KillerASC) return;
+
+    // 3. 보상용 GE(GE_KillReward)를 만들어서 적용합니다.
+    FGameplayEffectContextHandle ContextHandle = KillerASC->MakeEffectContext();
+    ContextHandle.AddSourceObject(Killer);
+
+    const FGameplayEffectSpecHandle SpecHandle = KillerASC->MakeOutgoingSpec(RewardGEClass, 1.0f, ContextHandle);
+
+    if (SpecHandle.Data.IsValid())
+    {
+        const FF1GameplayTags& GameplayTags = FF1GameplayTags::Get();
+
+        // SetByCaller로 값 주입 (아까 만든 태그 사용)
+        UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, GameplayTags.Attributes_Meta_Experience, XP);
+        UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, GameplayTags.Attributes_Meta_Gold, Gold);
+
+        UE_LOG(LogTemp, Warning, TEXT("[GiveReward] Applying GE to Killer..."));
+        // 4. 쏴라!
+        KillerASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+    }
 }
 
 bool UF1AbilitySystemLibrary::IsCriticalHit(const FGameplayEffectContextHandle& EffectContextHandle)

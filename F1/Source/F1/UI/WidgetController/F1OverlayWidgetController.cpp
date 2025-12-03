@@ -1,16 +1,16 @@
-// Fill out your copyright notice in the Description page of Project Settings.
 #include "UI/WidgetController/F1OverlayWidgetController.h"
 #include "AbilitySystem/F1AttributeSet.h"
 #include "AbilitySystem/F1AbilitySystemComponent.h"
 
 void UF1OverlayWidgetController::BroadcastInitialValues()
 {
+	// [핵심] 부모(Hero)의 방송을 먼저 실행합니다.
+	// 여기서 체력, 마나, 레벨, 닉네임, 스킬 아이콘이 방송됩니다.
+	Super::BroadcastInitialValues();
+
+	// 이제 자식만의 추가 스탯을 방송합니다.
 	const UF1AttributeSet* F1AttributeSet = CastChecked<UF1AttributeSet>(AttributeSet);
 
-	OnHealthChanged.Broadcast(F1AttributeSet->GetHealth());
-	OnMaxHealthChanged.Broadcast(F1AttributeSet->GetMaxHealth());
-	OnManaChanged.Broadcast(F1AttributeSet->GetMana());
-	OnMaxManaChanged.Broadcast(F1AttributeSet->GetMaxMana());
 	OnHealthRegenerationChanged.Broadcast(F1AttributeSet->GetHealthRegeneration());
 	OnManaRegenerationChanged.Broadcast(F1AttributeSet->GetManaRegeneration());
 
@@ -42,40 +42,13 @@ void UF1OverlayWidgetController::BroadcastInitialValues()
 
 void UF1OverlayWidgetController::BindCallbacksToDependencies()
 {
+	// [핵심] 부모(Hero)의 바인딩을 먼저 실행합니다.
+	// 여기서 체력/마나 변경 감지, 스킬 쿨타임 감지가 연결됩니다.
+	Super::BindCallbacksToDependencies();
+
 	const UF1AttributeSet* F1AttributeSet = CastChecked<UF1AttributeSet>(AttributeSet);
 
-	// Health - 클램핑 처리
-	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetHealthAttribute())
-		.AddLambda([this](const FOnAttributeChangeData& Data)
-			{
-				const UF1AttributeSet* AS = CastChecked<UF1AttributeSet>(AttributeSet);
-				float SafeHealth = FMath::Clamp(Data.NewValue, 0.0f, AS->GetMaxHealth());
-				OnHealthChanged.Broadcast(SafeHealth);
-			});
-
-	// Max Health
-	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetMaxHealthAttribute())
-		.AddLambda([this](const FOnAttributeChangeData& Data)
-			{
-				UE_LOG(LogTemp, Warning, TEXT("MaxHealth"));
-				OnMaxHealthChanged.Broadcast(Data.NewValue);
-			});
-
-	// Mana - 클램핑 처리
-	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetManaAttribute())
-		.AddLambda([this](const FOnAttributeChangeData& Data)
-			{
-				const UF1AttributeSet* AS = CastChecked<UF1AttributeSet>(AttributeSet);
-				float SafeMana = FMath::Clamp(Data.NewValue, 0.0f, AS->GetMaxMana());
-				OnManaChanged.Broadcast(SafeMana);
-			});
-
-	// Max Mana
-	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetMaxManaAttribute())
-		.AddLambda([this](const FOnAttributeChangeData& Data)
-			{
-				OnMaxManaChanged.Broadcast(Data.NewValue);
-			});
+	// [중복 삭제됨: Health, Mana 등은 부모가 함]
 
 	// Health Regeneration
 	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetHealthRegenerationAttribute())
@@ -95,7 +68,7 @@ void UF1OverlayWidgetController::BindCallbacksToDependencies()
 	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetAttackDamageAttribute())
 		.AddLambda([this](const FOnAttributeChangeData& Data)
 			{
-				UE_LOG(LogTemp, Warning, TEXT("AttackDamage"));
+				UE_LOG(LogTemp, Warning, TEXT("AttackDamage Changed"));
 				OnAttackDamageChanged.Broadcast(Data.NewValue);
 			});
 
@@ -218,7 +191,7 @@ void UF1OverlayWidgetController::BindCallbacksToDependencies()
 				OnAttackRangeChanged.Broadcast(Data.NewValue);
 			});
 
-	// EffectAssetTags 람다
+	// EffectAssetTags 람다 (이건 유지해도 됨)
 	Cast<UF1AbilitySystemComponent>(AbilitySystemComponent)->EffectAssetTags.AddLambda(
 		[](const FGameplayTagContainer& AssetTags)
 		{

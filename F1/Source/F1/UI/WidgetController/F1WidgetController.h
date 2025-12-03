@@ -6,6 +6,8 @@
 #include "UObject/NoExportTypes.h"
 #include "F1WidgetController.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAttributeChangedSignature, float, NewValue);
+
 class UAbilitySystemComponent;
 class UAttributeSet;
 class UF1AbilitySystemComponent;

@@ -78,5 +78,8 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
 	TObjectPtr<class UWidgetComponent> PlayerBar;
 
+	UPROPERTY()
+	FTimerHandle HUDInitTimerHandle;
+
 	virtual void InitUI() override;
 };

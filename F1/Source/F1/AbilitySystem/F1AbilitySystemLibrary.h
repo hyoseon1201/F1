@@ -44,6 +44,20 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "F1AbilitySystemLibrary|GAS")
 	static void AddCharacterAbilities(AActor* TargetActor);
 
+	// =========================================================================
+	// [추가] Gameplay Mechanics (게임플레이 메카닉)
+	// =========================================================================
+
+	/**
+	 * 몬스터(Victim) 처치 시, 공격자(Killer)에게 경험치와 골드 보상을 지급합니다.
+	 * Victim의 CombatInterface를 통해 보상량을 조회하고, RewardGE를 통해 적용합니다.
+	 * * @param Killer		보상을 받을 액터 (주로 플레이어)
+	 * @param Victim		사망한 액터 (주로 몬스터, 보상 정보를 가짐)
+	 * @param RewardGEClass	적용할 보상용 GE 클래스 (GE_KillReward)
+	 */
+	UFUNCTION(BlueprintCallable, Category = "F1AbilitySystemLibrary|GameplayMechanics")
+	static void GiveReward(AActor* Killer, AActor* Victim, TSubclassOf<UGameplayEffect> RewardGEClass);
+
 	// ===========================================
 	// GameplayEffect Context Functions
 	// ===========================================

@@ -13,7 +13,7 @@
 #include "AbilitySystem/F1AttributeSet.h"
 #include "Net/UnrealNetwork.h"
 #include "Components/CapsuleComponent.h"
-#include <AbilitySystem/F1AbilitySystemLibrary.h>
+#include "AbilitySystem/F1AbilitySystemLibrary.h"
 #include "Components/WidgetComponent.h"
 #include "UI/Widget/F1UserWidget.h"
 
@@ -43,31 +43,47 @@ void AF1HeroCharacter::PossessedBy(AController* NewController)
 {
     Super::PossessedBy(NewController);
 
+    // 서버 권한이 있을 때만 실행
     if (HasAuthority())
     {
-        // 1. 데이터 설정 (GE/GA 클래스 정보 로드 및 복제 시작)
+        // 1. 데이터 설정
         SetCharacterClass(FName("Dekker"));
 
-        // 2. GAS 연결 (ASC/AS 포인터 설정)
+        // 2. GAS 연결
         InitAbilityActorInfo();
 
+        // 3. 기타 델리게이트 설정
         SyncMovementSpeedWithAttributeSet();
         BindMovementSpeedDelegate();
 
-        // 3. Attributes 및 Abilities 부여 (Library 사용)
+        // 4. 스탯 초기화
         UF1AbilitySystemLibrary::InitializeDefaultAttributes(this);
+
+        // 5. [중요] 스킬 배우기 (가방 채우기)
+        // 이 함수가 실행되어야 ASC에 스킬이 들어갑니다.
         UF1AbilitySystemLibrary::AddCharacterAbilities(this);
 
-        // 4. 레벨 기반 성장 적용 (있다면)
+        // 6. 레벨 성장 적용
         ApplyLevelBasedGrowth();
 
+        // 7. 팀 ID 동기화
         if (AF1PlayerState* F1PS = GetPlayerState<AF1PlayerState>())
         {
-            // 내 캐릭터의 TeamID를 PlayerState의 것과 일치시킴
             SetGenericTeamId(F1PS->GetGenericTeamId());
         }
     }
 
+    // [핵심 추가] 8. HUD(오버레이) 초기화
+    // 스킬을 다 배운 뒤에 HUD를 초기화해야 아이콘이 뜹니다.
+    if (APlayerController* PC = Cast<APlayerController>(GetController()))
+    {
+        if (AF1HUD* HUD = Cast<AF1HUD>(PC->GetHUD()))
+        {
+            HUD->InitOverlay(PC, GetPlayerState(), AbilitySystemComponent, AttributeSet);
+        }
+    }
+
+    // 9. 캐릭터 머리 위 위젯 초기화
     InitUI();
 }
 
@@ -75,12 +91,10 @@ void AF1HeroCharacter::OnRep_PlayerState()
 {
     Super::OnRep_PlayerState();
 
-    // 1. GAS 연결 (클라이언트에서 PlayerState 데이터와 Character 연결)
     InitAbilityActorInfo();
 
-    if (IsLocallyControlled()) // 또는 이 캐릭터가 보는 화면이라면
+    if (IsLocallyControlled())
     {
-        // 델리게이트 등록 및 최초 바인딩
         BindMovementSpeedDelegate();
         SyncMovementSpeedWithAttributeSet();
     }
@@ -90,8 +104,48 @@ void AF1HeroCharacter::OnRep_PlayerState()
         SetGenericTeamId(F1PS->GetGenericTeamId());
     }
 
-    // 2. UI 초기화 (ASC 연결 및 데이터 복제가 완료되었을 가능성이 높은 시점)
-    InitUI();
+    // [핵심 수정] "데이터가 올 때까지 반복 체크" 하는 타이머
+    if (APlayerController* PC = Cast<APlayerController>(GetController()))
+    {
+        // 람다 내부에서 타이머를 제어하기 위해 TimerDelegate 사용
+        FTimerDelegate TimerDelegate;
+
+        TimerDelegate.BindLambda([this, PC]()
+            {
+                // 1. 유효성 검사 (캐릭터나 PC가 죽었으면 중단)
+                if (!IsValid(this) || !IsValid(PC))
+                {
+                    GetWorld()->GetTimerManager().ClearTimer(HUDInitTimerHandle);
+                    return;
+                }
+
+                // 2. 데이터 도착 확인 (ASC, AttributeSet, 그리고 *스킬 목록*)
+                // ActivatableAbilities.Num() > 0 : 스킬이 최소 1개 이상 도착했다는 뜻
+                bool bAttributesReady = (AttributeSet != nullptr);
+                bool bAbilitiesReady = (AbilitySystemComponent != nullptr && AbilitySystemComponent->GetActivatableAbilities().Num() > 0);
+
+                if (bAttributesReady && bAbilitiesReady)
+                {
+                    // 3. 데이터가 준비됨! -> 타이머 해제하고 초기화 진행
+                    GetWorld()->GetTimerManager().ClearTimer(HUDInitTimerHandle);
+
+                    if (AF1HUD* HUD = Cast<AF1HUD>(PC->GetHUD()))
+                    {
+                        UE_LOG(LogTemp, Warning, TEXT("[Client] All Data Received! Initializing HUD..."));
+                        HUD->InitOverlay(PC, GetPlayerState(), AbilitySystemComponent, AttributeSet);
+                        InitUI();
+                    }
+                }
+                else
+                {
+                    // 아직 안 옴... 다음 틱에 다시 확인 (로그는 너무 많이 뜨니 생략 가능)
+                    // UE_LOG(LogTemp, Display, TEXT("[Client] Waiting for Abilities..."));
+                }
+            });
+
+        // 0.1초 간격으로 반복(Loop) 실행
+        GetWorld()->GetTimerManager().SetTimer(HUDInitTimerHandle, TimerDelegate, 0.1f, true);
+    }
 }
 
 void AF1HeroCharacter::SetCharacterClass(FName CharacterRowName)
@@ -259,17 +313,4 @@ void AF1HeroCharacter::InitAbilityActorInfo()
     // 2. 포인터 설정
     AbilitySystemComponent = F1PlayerState->GetAbilitySystemComponent();
     AttributeSet = F1PlayerState->GetAttributeSet();
-
-    // 3. HUD 초기화 (로컬 플레이어 전용)
-    if (IsLocallyControlled())
-    {
-        if (AF1PlayerController* F1PlayerController = Cast<AF1PlayerController>(GetController()))
-        {
-            if (AF1HUD* F1HUD = Cast<AF1HUD>(F1PlayerController->GetHUD()))
-            {
-                // HUD 초기화는 ASC 연결 직후, 로컬 플레이어 클라이언트에서 수행합니다.
-                F1HUD->InitOverlay(F1PlayerController, F1PlayerState, AbilitySystemComponent, AttributeSet);
-            }
-        }
-    }
 }

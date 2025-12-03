@@ -82,6 +82,17 @@ public:
     FGameplayTag Ability_Skill_ArcBolt;    // Q
     FGameplayTag Ability_Skill_Haste;   // W
     FGameplayTag Ability_Skill_SpawnDron;  // E
+    FGameplayTag Ability_Skill_MeteorShower; // R
+
+    // ===========================================
+    // Cooldown Tags (추가 필수! Ability 태그와 1:1 대응)
+    // ===========================================
+    FGameplayTag Cooldown_Attack; // [핵심] 평타 쿨타임용 (공속 제한에 쓰임)
+
+    FGameplayTag Cooldown_Skill_ArcBolt;
+    FGameplayTag Cooldown_Skill_Haste;
+    FGameplayTag Cooldown_Skill_SpawnDron;
+    FGameplayTag Cooldown_Skill_MeteorShower;
 
     // ===========================================
     // Input Tags
@@ -108,6 +119,12 @@ public:
     FGameplayTag DamageType_Physical;
     FGameplayTag DamageType_Magical;
     FGameplayTag DamageType_True;
+
+    // ===========================================
+    // Reward Tags (SetByCaller용)
+    // ===========================================
+    FGameplayTag Attributes_Meta_Experience;
+    FGameplayTag Attributes_Meta_Gold;
 
 private:
     static FF1GameplayTags GameplayTags;

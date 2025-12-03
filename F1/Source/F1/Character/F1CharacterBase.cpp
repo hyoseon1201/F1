@@ -173,6 +173,16 @@ AActor* AF1CharacterBase::GetCombatTarget_Implementation() const
     return nullptr;
 }
 
+int32 AF1CharacterBase::GetRewardXP_Implementation()
+{
+    return int32();
+}
+
+int32 AF1CharacterBase::GetRewardGold_Implementation()
+{
+    return int32();
+}
+
 void AF1CharacterBase::Die()
 {
     MulticastHandleDeath();
