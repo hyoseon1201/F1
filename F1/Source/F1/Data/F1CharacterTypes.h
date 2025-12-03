@@ -37,15 +37,15 @@ struct F1_API FCharacterClassInfo : public FTableRowBase
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Info")
     FString CharacterName;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Info")
-    UTexture2D* CharacterIcon = nullptr;
-
     // 비주얼 에셋 (메시, 애니메이션)
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Assets")
     USkeletalMesh* CharacterMesh = nullptr;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Assets")
     TSubclassOf<UAnimInstance> AnimBlueprint;
+
+    UPROPERTY(EditAnywhere, Category = "Character Assets")
+    TObjectPtr<UTexture2D> CharacterIcon;
 
     // 캐릭터 물리 설정
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Physics", meta = (ClampMin = "10.0", ClampMax = "200.0"))
