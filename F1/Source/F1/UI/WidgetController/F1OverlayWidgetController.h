@@ -1,13 +1,25 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
 #pragma once
 
 #include "CoreMinimal.h"
 #include "UI/WidgetController/F1HeroWidgetController.h"
+#include "Data/F1AbilityInfo.h" // [필수] 데이터 에셋 헤더
+#include "GameplayTagContainer.h"
 #include "F1OverlayWidgetController.generated.h"
 
-// FOnAttributeChangedSignature 선언은 부모나 F1WidgetController로 옮기는 게 좋습니다. 
-// 여기서는 중복 정의를 피하기 위해 그대로 두거나 재사용합니다.
-// (이미 정의되어 있다면 지우셔도 됩니다.)
+// 델리게이트 선언 (스킬 정보, 쿨타임)
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FAbilityInfoSignature, const FF1AbilityInfo&, Info);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCooldownChangeSignature, FGameplayTag, AbilityTag, float, TimeRemaining);
 
+// 전방 선언
+struct FGameplayEffectSpec;
+struct FActiveGameplayEffectHandle;
+
+/**
+ * HUD(오버레이) 전용 컨트롤러
+ * 경험치, 골드, 초상화, 스킬 아이콘, 쿨타임 정보를 모두 관리합니다.
+ */
 UCLASS(BlueprintType, Blueprintable)
 class F1_API UF1OverlayWidgetController : public UF1HeroWidgetController
 {
@@ -17,9 +29,9 @@ public:
 	virtual void BroadcastInitialValues() override;
 	virtual void BindCallbacksToDependencies() override;
 
-	// [중복 삭제] 체력, 마나 등은 부모가 가지고 있으므로 여기선 지웁니다.
-	// 오직 Overlay만의 추가 스탯들만 남깁니다.
-
+	// ==============================================================
+	// [기존] 추가 스탯 델리게이트들 (생략 없이 유지)
+	// ==============================================================
 	UPROPERTY(BlueprintAssignable, Category = "GAS|Attributes")
 	FOnAttributeChangedSignature OnHealthRegenerationChanged;
 
@@ -79,4 +91,24 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "GAS|Range")
 	FOnAttributeChangedSignature OnAttackRangeChanged;
+
+	// ==============================================================
+	// [이사 옴] 스킬 및 쿨타임 관련 델리게이트
+	// ==============================================================
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Messages")
+	FAbilityInfoSignature AbilityInfoDelegate;
+
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Messages")
+	FOnCooldownChangeSignature OnCooldownChanged;
+
+protected:
+	// [이사 옴] 스킬 아이콘 정보가 담긴 데이터 에셋
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Widget Data")
+	TObjectPtr<class UF1AbilityData> AbilityInfo;
+
+	// [이사 옴] 쿨타임 태그가 변했을 때 호출될 콜백 함수
+	void OnAbilityTagsChanged(const FGameplayTag CallbackTag, int32 NewCount);
+
+	// [이사 옴] 이펙트 적용 시점 감지 (클라이언트 타이밍 이슈 해결용)
+	void OnActiveGameplayEffectAdded(UAbilitySystemComponent* Target, const FGameplayEffectSpec& SpecApplied, FActiveGameplayEffectHandle ActiveEffectHandle);
 };

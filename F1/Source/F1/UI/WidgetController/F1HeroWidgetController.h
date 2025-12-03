@@ -14,8 +14,6 @@
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAttributeChangeSignature, float, NewValue);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnLevelChangeSignature, int32, NewLevel);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnNameChangeSignature, const FString&, NewName);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FAbilityInfoSignature, const FF1AbilityInfo&, Info);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCooldownChangeSignature, FGameplayTag, AbilityTag, float, TimeRemaining);
 
 struct FGameplayEffectSpec;
 struct FActiveGameplayEffectHandle;
@@ -57,20 +55,4 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "GAS|Status")
 	FOnNameChangeSignature OnNameChanged;
-
-	UPROPERTY(BlueprintAssignable, Category = "GAS|Messages")
-	FAbilityInfoSignature AbilityInfoDelegate;
-
-	UPROPERTY(BlueprintAssignable, Category = "GAS|Messages")
-	FOnCooldownChangeSignature OnCooldownChanged;
-
-protected:
-	// 스킬 아이콘 정보가 담긴 데이터 에셋
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Widget Data")
-	TObjectPtr<class UF1AbilityData> AbilityInfo;
-
-	// 쿨타임 태그가 변했을 때 호출될 콜백 함수
-	void OnAbilityTagsChanged(const FGameplayTag CallbackTag, int32 NewCount);
-
-	void OnActiveGameplayEffectAdded(UAbilitySystemComponent* Target, const FGameplayEffectSpec& SpecApplied, FActiveGameplayEffectHandle ActiveEffectHandle);
 };
