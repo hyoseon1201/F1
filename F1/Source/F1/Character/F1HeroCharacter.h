@@ -35,11 +35,17 @@ protected:
 	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_CurrentCharacterInfo, Category = "Character")
 	FCharacterClassInfo CurrentCharacterInfo;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attributes")
+	TObjectPtr<UCurveTable> LevelUpInfoTable;
+
+	int32 GetXPRequirement(int32 Level) const;
+
 	UFUNCTION()
 	void OnRep_CurrentCharacterInfo();
 
 	void ApplyVisualsFromCurrentInfo();
 	void SyncMovementSpeedWithAttributeSet();
+
 
 	// ===========================================
 	// Combat System
@@ -59,6 +65,10 @@ private:
 public:
 	virtual int32 GetCurrentLevel() const override;
 	virtual float GetCurrentExperience() const override;
+
+	virtual void AddToLevel(int32 InLevelToAdd) override;
+	virtual void LevelUp() override;
+
 	virtual void ApplyLevelBasedGrowth() override;
 
 	virtual FVector GetCombatSocketLocation() override;

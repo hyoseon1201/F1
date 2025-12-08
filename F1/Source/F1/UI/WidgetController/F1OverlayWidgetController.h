@@ -4,13 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "UI/WidgetController/F1HeroWidgetController.h"
-#include "Data/F1AbilityInfo.h" // [필수] 데이터 에셋 헤더
+#include "Data/F1AbilityInfo.h"
 #include "GameplayTagContainer.h"
 #include "F1OverlayWidgetController.generated.h"
 
-// 델리게이트 선언 (스킬 정보, 쿨타임)
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FAbilityInfoSignature, const FF1AbilityInfo&, Info);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCooldownChangeSignature, FGameplayTag, AbilityTag, float, TimeRemaining);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnCooldownChangeSignature, FGameplayTag, CooldownTag, float, TimeRemaining, FGameplayTag, InputTag);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerStatChangedSignature, UTexture2D*, Image);
 
 // 전방 선언
 struct FGameplayEffectSpec;
@@ -100,6 +100,18 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "GAS|Messages")
 	FOnCooldownChangeSignature OnCooldownChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Attributes")
+	FOnAttributeChangeSignature OnGoldChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Attributes")
+	FOnAttributeChangeSignature OnXPChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Attributes")
+	FOnAttributeChangeSignature OnMaxXPChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Attributes")
+	FOnPlayerStatChangedSignature OnPlayerIconChanged;
 
 protected:
 	// [이사 옴] 스킬 아이콘 정보가 담긴 데이터 에셋

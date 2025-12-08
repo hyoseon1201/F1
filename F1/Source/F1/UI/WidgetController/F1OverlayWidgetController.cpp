@@ -3,8 +3,9 @@
 #include "UI/WidgetController/F1OverlayWidgetController.h"
 #include "AbilitySystem/F1AttributeSet.h"
 #include "AbilitySystem/F1AbilitySystemComponent.h"
-#include "Data/F1AbilityInfo.h" // 데이터 에셋
+#include "Data/F1AbilityInfo.h"
 #include "GameplayTagContainer.h"
+#include <Character/F1HeroCharacter.h>
 
 void UF1OverlayWidgetController::BroadcastInitialValues()
 {
@@ -34,6 +35,17 @@ void UF1OverlayWidgetController::BroadcastInitialValues()
 	OnTenacityChanged.Broadcast(F1AS->GetTenacity());
 	OnSlowResistanceChanged.Broadcast(F1AS->GetSlowResistance());
 	OnAttackRangeChanged.Broadcast(F1AS->GetAttackRange());
+	OnGoldChanged.Broadcast(F1AS->GetGold());
+	OnXPChanged.Broadcast(F1AS->GetExperience());
+	OnMaxXPChanged.Broadcast(F1AS->GetMaxExperience());
+
+	if (AF1HeroCharacter* Hero = Cast<AF1HeroCharacter>(GetF1ASC()->GetAvatarActor()))
+	{
+		if (Hero->GetCurrentCharacterInfo().CharacterIcon)
+		{
+			OnPlayerIconChanged.Broadcast(Hero->GetCurrentCharacterInfo().CharacterIcon);
+		}
+	}
 
 	// ==============================================================
 	// [이사 옴] 스킬(Ability) 아이콘 정보 방송
@@ -82,6 +94,7 @@ void UF1OverlayWidgetController::BindCallbacksToDependencies()
 	Super::BindCallbacksToDependencies();
 
 	const UF1AttributeSet* F1AS = CastChecked<UF1AttributeSet>(AttributeSet);
+	if (!GetF1ASC()) return;
 
 	// ==============================================================
 	// [기존] 추가 스탯 바인딩
@@ -146,6 +159,15 @@ void UF1OverlayWidgetController::BindCallbacksToDependencies()
 	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AS->GetAttackRangeAttribute()).AddLambda(
 		[this](const FOnAttributeChangeData& Data) { OnAttackRangeChanged.Broadcast(Data.NewValue); }
 	);
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AS->GetGoldAttribute()).AddLambda(
+		[this](const FOnAttributeChangeData& Data) { OnGoldChanged.Broadcast(Data.NewValue); }
+	);
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AS->GetExperienceAttribute()).AddLambda(
+		[this](const FOnAttributeChangeData& Data) { OnXPChanged.Broadcast(Data.NewValue); }
+	);
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AS->GetExperienceAttribute()).AddLambda(
+		[this](const FOnAttributeChangeData& Data) { OnMaxXPChanged.Broadcast(Data.NewValue); }
+	);
 
 	// EffectAssetTags 로그용 (유지)
 	GetF1ASC()->EffectAssetTags.AddLambda(
@@ -183,9 +205,24 @@ void UF1OverlayWidgetController::BindCallbacksToDependencies()
 	}
 }
 
-// [이사 옴] 태그 변경 시 호출
 void UF1OverlayWidgetController::OnAbilityTagsChanged(const FGameplayTag CallbackTag, int32 NewCount)
 {
+	// 1. 먼저 쿨타임 태그(CallbackTag)와 매칭되는 InputTag(Q, W, E, R)를 찾습니다.
+	FGameplayTag InputTag = FGameplayTag();
+	if (AbilityInfo)
+	{
+		for (const FF1AbilityInfo& Info : AbilityInfo->AbilityInformation)
+		{
+			// 쿨타임 태그가 일치하면 -> 그 스킬의 InputTag를 가져옴
+			if (Info.CooldownTag.MatchesTagExact(CallbackTag))
+			{
+				InputTag = Info.InputTag;
+				break;
+			}
+		}
+	}
+
+	// 2. 쿨타임 시작 (NewCount > 0)
 	if (NewCount > 0)
 	{
 		FGameplayEffectQuery Query = FGameplayEffectQuery::MakeQuery_MatchAnyOwningTags(FGameplayTagContainer(CallbackTag));
@@ -193,43 +230,52 @@ void UF1OverlayWidgetController::OnAbilityTagsChanged(const FGameplayTag Callbac
 
 		if (Times.Num() > 0)
 		{
-			OnCooldownChanged.Broadcast(CallbackTag, Times[0]);
+			// InputTag를 포함해서 방송!
+			OnCooldownChanged.Broadcast(CallbackTag, Times[0], InputTag);
 		}
 	}
+	// 3. 쿨타임 종료
 	else
 	{
-		OnCooldownChanged.Broadcast(CallbackTag, 0.f);
+		// 종료될 때도 어떤 키인지 알려주면 좋음 (UI 리셋용)
+		OnCooldownChanged.Broadcast(CallbackTag, 0.f, InputTag);
 	}
 }
 
-// [이사 옴] 이펙트 추가 시 호출
 void UF1OverlayWidgetController::OnActiveGameplayEffectAdded(UAbilitySystemComponent* Target, const FGameplayEffectSpec& SpecApplied, FActiveGameplayEffectHandle ActiveEffectHandle)
 {
 	FGameplayTagContainer AssetTags;
 	SpecApplied.GetAllGrantedTags(AssetTags);
 
 	FGameplayTag CooldownTag = FGameplayTag();
+	FGameplayTag InputTag = FGameplayTag(); // [추가] 찾을 변수 준비
+
 	if (AbilityInfo)
 	{
 		for (const FF1AbilityInfo& Info : AbilityInfo->AbilityInformation)
 		{
+			// 적용된 이펙트 태그 중에 내 쿨타임 태그가 있는지 확인
 			if (AssetTags.HasTagExact(Info.CooldownTag))
 			{
 				CooldownTag = Info.CooldownTag;
+				InputTag = Info.InputTag; // [핵심] 여기서 짝꿍인 InputTag를 찾아냄!
 				break;
 			}
 		}
 	}
 
-	if (CooldownTag.IsValid())
+	// 둘 다 유효할 때만 방송
+	if (CooldownTag.IsValid() && InputTag.IsValid())
 	{
 		FGameplayEffectQuery Query = FGameplayEffectQuery::MakeQuery_MatchAnyOwningTags(FGameplayTagContainer(CooldownTag));
 		TArray<float> Times = GetF1ASC()->GetActiveEffectsTimeRemaining(Query);
 
 		if (Times.Num() > 0)
 		{
-			// UE_LOG(LogTemp, Warning, TEXT("[Overlay] Cooldown Effect Added! Time: %f"), Times[0]);
-			OnCooldownChanged.Broadcast(CooldownTag, Times[0]);
+			// UE_LOG(LogTemp, Warning, TEXT("[Overlay] Cooldown Added! Input: %s, Time: %f"), *InputTag.ToString(), Times[0]);
+
+			// InputTag를 포함해서 방송!
+			OnCooldownChanged.Broadcast(CooldownTag, Times[0], InputTag);
 		}
 	}
 }

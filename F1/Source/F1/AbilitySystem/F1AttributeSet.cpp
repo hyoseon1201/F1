@@ -98,6 +98,27 @@ void UF1AttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 	if (Data.EvaluatedData.Attribute == GetExperienceAttribute())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("!!! Experience Updated !!! New Value: %f"), GetExperience());
+		float CurrentXP = GetExperience();
+		float MaxXP = GetMaxExperience();
+
+		IF1CombatInterface* CombatInterface = Cast<IF1CombatInterface>(Props.TargetAvatarActor);
+
+		int32 LevelsGained = 0;
+		while (CurrentXP >= MaxXP)
+		{
+			if (MaxXP <= 0.f)
+				break;
+			CurrentXP -= MaxXP;
+			LevelsGained++;
+
+			if (CombatInterface)
+			{
+				CombatInterface->AddToLevel(1);
+				CombatInterface->LevelUp();
+				MaxXP = GetMaxExperience();
+			}
+		}
+		SetExperience(CurrentXP);
 	}
 
 	if (Data.EvaluatedData.Attribute == GetGoldAttribute())

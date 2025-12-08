@@ -24,6 +24,10 @@ class F1_API IF1CombatInterface
 public:
 	virtual int32 GetCurrentLevel() const = 0;
 	virtual float GetCurrentExperience() const = 0;
+
+	virtual void AddToLevel(int32 InLevelToAdd) = 0;
+	virtual void LevelUp() = 0;
+
 	virtual void ApplyLevelBasedGrowth() = 0;
 
 	virtual FVector GetCombatSocketLocation() = 0;

@@ -61,6 +61,10 @@ private:
 public:
     virtual int32 GetCurrentLevel() const override;
     virtual float GetCurrentExperience() const override;
+
+    virtual void AddToLevel(int32 InLevelToAdd) override;
+    virtual void LevelUp() override;
+
     virtual void ApplyLevelBasedGrowth() override;
 
     virtual FVector GetCombatSocketLocation() override;

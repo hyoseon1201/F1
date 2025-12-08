@@ -10,6 +10,7 @@
 #include "UI/Widget/F1UserWidget.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "F1.h"
+#include <Game/F1PlayerState.h>
 
 AF1CharacterBase::AF1CharacterBase()
 {
@@ -89,6 +90,11 @@ bool AF1CharacterBase::IsEnemyToPlayer() const
 
 int32 AF1CharacterBase::GetCurrentLevel() const
 {
+    if (AF1PlayerState* F1PS = GetPlayerState<AF1PlayerState>())
+    {
+        return F1PS->GetPlayerLevel();
+    }
+
     if (UAbilitySystemComponent* ASC = GetAbilitySystemComponent())
     {
         if (const UAttributeSet* AS = ASC->GetAttributeSet(UF1AttributeSet::StaticClass()))
@@ -111,6 +117,14 @@ float AF1CharacterBase::GetCurrentExperience() const
         }
     }
     return 0.0f;
+}
+
+void AF1CharacterBase::AddToLevel(int32 InLevelToAdd)
+{
+}
+
+void AF1CharacterBase::LevelUp()
+{
 }
 
 void AF1CharacterBase::ApplyLevelBasedGrowth()

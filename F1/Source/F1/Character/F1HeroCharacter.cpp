@@ -104,46 +104,56 @@ void AF1HeroCharacter::OnRep_PlayerState()
         SetGenericTeamId(F1PS->GetGenericTeamId());
     }
 
-    // [핵심 수정] "데이터가 올 때까지 반복 체크" 하는 타이머
     if (APlayerController* PC = Cast<APlayerController>(GetController()))
     {
-        // 람다 내부에서 타이머를 제어하기 위해 TimerDelegate 사용
+        // [핵심 수정 1] this를 직접 쓰지 않고 '약한 참조(Weak Pointer)'로 감쌉니다.
+        // 이렇게 하면 캐릭터가 파괴되었을 때 자동으로 감지할 수 있습니다.
+        TWeakObjectPtr<AF1HeroCharacter> WeakThis(this);
+
         FTimerDelegate TimerDelegate;
 
-        TimerDelegate.BindLambda([this, PC]()
+        // 람다 캡처에 this 대신 WeakThis를 넣습니다.
+        TimerDelegate.BindLambda([WeakThis, PC]()
             {
-                // 1. 유효성 검사 (캐릭터나 PC가 죽었으면 중단)
-                if (!IsValid(this) || !IsValid(PC))
+                // [핵심 수정 2] WeakThis가 유효한지 먼저 검사합니다.
+                // 캐릭터가 죽었으면 여기서 걸러져서 리턴되므로 크래시가 안 납니다.
+                if (!WeakThis.IsValid() || !IsValid(PC))
                 {
-                    GetWorld()->GetTimerManager().ClearTimer(HUDInitTimerHandle);
                     return;
                 }
 
-                // 2. 데이터 도착 확인 (ASC, AttributeSet, 그리고 *스킬 목록*)
-                // ActivatableAbilities.Num() > 0 : 스킬이 최소 1개 이상 도착했다는 뜻
-                bool bAttributesReady = (AttributeSet != nullptr);
-                bool bAbilitiesReady = (AbilitySystemComponent != nullptr && AbilitySystemComponent->GetActivatableAbilities().Num() > 0);
+                // [핵심 수정 3] 유효함이 확인되었으니, 진짜 포인터(StrongThis)를 꺼냅니다.
+                AF1HeroCharacter* StrongThis = WeakThis.Get();
+
+                // 2. 데이터 도착 확인
+                // 이제 this 대신 StrongThis를 사용합니다.
+                bool bAttributesReady = (StrongThis->AttributeSet != nullptr);
+                bool bAbilitiesReady = (StrongThis->AbilitySystemComponent != nullptr &&
+                    StrongThis->AbilitySystemComponent->GetActivatableAbilities().Num() > 0);
 
                 if (bAttributesReady && bAbilitiesReady)
                 {
                     // 3. 데이터가 준비됨! -> 타이머 해제하고 초기화 진행
-                    GetWorld()->GetTimerManager().ClearTimer(HUDInitTimerHandle);
+                    // StrongThis를 통해 GetWorld()에 안전하게 접근
+                    if (UWorld* World = StrongThis->GetWorld())
+                    {
+                        World->GetTimerManager().ClearTimer(StrongThis->HUDInitTimerHandle);
+                    }
 
                     if (AF1HUD* HUD = Cast<AF1HUD>(PC->GetHUD()))
                     {
                         UE_LOG(LogTemp, Warning, TEXT("[Client] All Data Received! Initializing HUD..."));
-                        HUD->InitOverlay(PC, GetPlayerState(), AbilitySystemComponent, AttributeSet);
-                        InitUI();
+
+                        // 데이터 넘겨주기
+                        HUD->InitOverlay(PC, StrongThis->GetPlayerState(), StrongThis->AbilitySystemComponent, StrongThis->AttributeSet);
+
+                        // UI 초기화
+                        StrongThis->InitUI();
                     }
-                }
-                else
-                {
-                    // 아직 안 옴... 다음 틱에 다시 확인 (로그는 너무 많이 뜨니 생략 가능)
-                    // UE_LOG(LogTemp, Display, TEXT("[Client] Waiting for Abilities..."));
                 }
             });
 
-        // 0.1초 간격으로 반복(Loop) 실행
+        // 타이머 실행
         GetWorld()->GetTimerManager().SetTimer(HUDInitTimerHandle, TimerDelegate, 0.1f, true);
     }
 }
@@ -178,6 +188,37 @@ float AF1HeroCharacter::GetCurrentExperience() const
     return Super::GetCurrentExperience();
 }
 
+void AF1HeroCharacter::AddToLevel(int32 InLevelToAdd)
+{
+    AF1PlayerState* F1PS = GetPlayerState<AF1PlayerState>();
+
+    if (F1PS)
+    {
+        const int32 CurrentLevel = F1PS->GetPlayerLevel();
+        const int32 NewLevel = CurrentLevel + InLevelToAdd;
+
+        F1PS->SetPlayerLevel(NewLevel);
+
+        if (UF1AttributeSet* AS = Cast<UF1AttributeSet>(GetAttributeSet()))
+        {
+            AS->SetCharacterLevel(NewLevel);
+        }
+    }
+}
+
+void AF1HeroCharacter::LevelUp()
+{
+    ApplyLevelBasedGrowth();
+
+    if (UF1AttributeSet* AS = Cast<UF1AttributeSet>(GetAttributeSet()))
+    {
+        AS->SetHealth(AS->GetMaxHealth());
+        AS->SetMana(AS->GetMaxMana());
+    }
+
+    // TODO : LevelupEffect
+}
+
 void AF1HeroCharacter::ApplyLevelBasedGrowth()
 {
     if (!HasAuthority() || !GrowthAttributes)
@@ -186,18 +227,26 @@ void AF1HeroCharacter::ApplyLevelBasedGrowth()
     }
 
     int32 CurrentLevel = GetCurrentLevel();
-    if (CurrentLevel <= 1)
+    
+    UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+    if (ASC)
     {
-        return;
-    }
+        FGameplayEffectContextHandle ContextHandle = ASC->MakeEffectContext();
+        ContextHandle.AddSourceObject(this);
 
-    const FGameplayEffectContextHandle ContextHandle = GetAbilitySystemComponent()->MakeEffectContext();
-    const FGameplayEffectSpecHandle SpecHandle = GetAbilitySystemComponent()->MakeOutgoingSpec(
-        GrowthAttributes,
-        CurrentLevel - 1,
-        ContextHandle
-    );
-    GetAbilitySystemComponent()->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+        // [중요] 이펙트 레벨을 'CurrentLevel'로 설정
+        // CurveTable에서 해당 레벨에 맞는 MaxHP, MaxMana 값을 가져오게 됨
+        const FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(
+            GrowthAttributes,
+            static_cast<float>(CurrentLevel),
+            ContextHandle
+        );
+
+        if (SpecHandle.Data.IsValid())
+        {
+            ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+        }
+    }
 }
 
 FVector AF1HeroCharacter::GetCombatSocketLocation()
@@ -255,6 +304,20 @@ void AF1HeroCharacter::InitUI()
         WidgetController->BroadcastInitialValues();
         WidgetController->BindCallbacksToDependencies();
     }
+}
+
+int32 AF1HeroCharacter::GetXPRequirement(int32 Level) const
+{
+    if (!LevelUpInfoTable) return 999999; // 안전장치
+
+    // 테이블에서 "MaxXP"라는 이름의 행을 찾음
+    const FRealCurve* LevelCurve = LevelUpInfoTable->FindCurve(FName("MaxXP"), FString());
+    if (LevelCurve)
+    {
+        // 해당 레벨(X축)의 필요 경험치(Y축)를 반환
+        return FMath::FloorToInt(LevelCurve->Eval(static_cast<float>(Level)));
+    }
+    return 999999;
 }
 
 void AF1HeroCharacter::OnRep_CurrentCharacterInfo()
