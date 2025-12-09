@@ -19,6 +19,7 @@ void UF1ProjectileSpell::ActivateAbility(const FGameplayAbilitySpecHandle Handle
 	const FGameplayEventData* TriggerEventData)
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+	UE_LOG(LogTemp, Warning, TEXT("My Cooldown Tags: %s"), *GetCooldownTags()->ToString());
 }
 
 // ============================================================================
