@@ -165,7 +165,7 @@ void UF1OverlayWidgetController::BindCallbacksToDependencies()
 	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AS->GetExperienceAttribute()).AddLambda(
 		[this](const FOnAttributeChangeData& Data) { OnXPChanged.Broadcast(Data.NewValue); }
 	);
-	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AS->GetExperienceAttribute()).AddLambda(
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AS->GetMaxExperienceAttribute()).AddLambda(
 		[this](const FOnAttributeChangeData& Data) { OnMaxXPChanged.Broadcast(Data.NewValue); }
 	);
 
