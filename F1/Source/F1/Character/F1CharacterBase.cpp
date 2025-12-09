@@ -212,6 +212,21 @@ void AF1CharacterBase::Attack()
 
 void AF1CharacterBase::MulticastHandleDeath_Implementation()
 {
+    if (UAbilitySystemComponent* ASC = GetAbilitySystemComponent())
+    {
+        ASC->CancelAllAbilities();
+    }
+
+    // [공통 2] 애니메이션 강제 중단
+    if (USkeletalMeshComponent* MeshComp = GetMesh())
+    {
+        if (UAnimInstance* AnimInstance = MeshComp->GetAnimInstance())
+        {
+            AnimInstance->StopAllMontages(0.0f);
+        }
+    }
+
+    // [공통 3] 물리(Ragdoll) 처리
     GetMesh()->SetSimulatePhysics(true);
     GetMesh()->SetEnableGravity(true);
     GetMesh()->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);

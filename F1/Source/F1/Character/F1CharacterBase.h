@@ -98,6 +98,9 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Reward")
     TSubclassOf<UGameplayEffect> KillRewardEffectClass;
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat")
+    float LifeSpan = 5.f;
+
     virtual void UpdateCombatSocketsFromCharacterInfo();
 
 public:

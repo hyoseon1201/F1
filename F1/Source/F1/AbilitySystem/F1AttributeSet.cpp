@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "AbilitySystem/F1AttributeSet.h"
 #include "AbilitySystemBlueprintLibrary.h"
@@ -23,7 +23,7 @@ void UF1AttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	// ±âº» »ıÁ¸ ´É·ÂÄ¡
+	// ê¸°ë³¸ ìƒì¡´ ëŠ¥ë ¥ì¹˜
 	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, Health, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, MaxHealth, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, HealthRegeneration, COND_None, REPNOTIFY_Always);
@@ -31,39 +31,39 @@ void UF1AttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, MaxMana, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, ManaRegeneration, COND_None, REPNOTIFY_Always);
 
-	// °ø°İ ´É·ÂÄ¡
+	// ê³µê²© ëŠ¥ë ¥ì¹˜
 	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, AttackDamage, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, AttackSpeed, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, AbilityPower, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, CriticalStrikeChance, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, CriticalStrikeDamage, COND_None, REPNOTIFY_Always);
 
-	// ¹æ¾î ´É·ÂÄ¡
+	// ë°©ì–´ ëŠ¥ë ¥ì¹˜
 	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, Armor, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, MagicResistance, COND_None, REPNOTIFY_Always);
 
-	// ÀÌµ¿ ¹× À¯Æ¿¸®Æ¼
+	// ì´ë™ ë° ìœ í‹¸ë¦¬í‹°
 	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, MovementSpeed, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, AbilityHaste, COND_None, REPNOTIFY_Always);
 
-	// °üÅë·Â
+	// ê´€í†µë ¥
 	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, ArmorPenetrationFlat, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, ArmorPenetrationPercent, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, MagicPenetrationFlat, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, MagicPenetrationPercent, COND_None, REPNOTIFY_Always);
 
-	// ÈíÇ÷
+	// í¡í˜ˆ
 	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, LifeSteal, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, Omnivamp, COND_None, REPNOTIFY_Always);
 
-	// ÀúÇ×·Â
+	// ì €í•­ë ¥
 	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, Tenacity, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, SlowResistance, COND_None, REPNOTIFY_Always);
 
-	// »ç°Å¸®
+	// ì‚¬ê±°ë¦¬
 	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, AttackRange, COND_None, REPNOTIFY_Always);
 
-	// Ä³¸¯ÅÍ Á¤º¸ Ãß°¡
+	// ìºë¦­í„° ì •ë³´ ì¶”ê°€
 	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, CharacterLevel, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, Experience, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UF1AttributeSet, MaxExperience, COND_None, REPNOTIFY_Always);
@@ -93,32 +93,80 @@ void UF1AttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 	SetEffectProperties(Data, Props);
 
 	// ==================================================
-	// [µğ¹ö±ë] °æÇèÄ¡³ª °ñµå°¡ º¯Çß´ÂÁö È®ÀÎÇÏ´Â ·Î±× (Ãß°¡!)
+	// [ë””ë²„ê¹…] ê²½í—˜ì¹˜ë‚˜ ê³¨ë“œê°€ ë³€í–ˆëŠ”ì§€ í™•ì¸í•˜ëŠ” ë¡œê·¸ (ì¶”ê°€!)
 	// ==================================================
 	if (Data.EvaluatedData.Attribute == GetExperienceAttribute())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("!!! Experience Updated !!! New Value: %f"), GetExperience());
 		float CurrentXP = GetExperience();
-		float MaxXP = GetMaxExperience();
+		UE_LOG(LogTemp, Warning, TEXT("[LevelUp] 1. XP Changed! CurrentXP: %f"), CurrentXP);
 
-		IF1CombatInterface* CombatInterface = Cast<IF1CombatInterface>(Props.TargetAvatarActor);
+		// 1. ì˜ì›… ìºë¦­í„° ìºìŠ¤íŒ…
+		AF1HeroCharacter* Hero = Cast<AF1HeroCharacter>(Props.TargetAvatarActor);
 
-		int32 LevelsGained = 0;
-		while (CurrentXP >= MaxXP)
+		if (Hero)
 		{
-			if (MaxXP <= 0.f)
-				break;
-			CurrentXP -= MaxXP;
-			LevelsGained++;
+			// PlayerState ê°€ì ¸ì˜¤ê¸°
+			AF1PlayerState* F1PS = Hero->GetPlayerState<AF1PlayerState>();
 
-			if (CombatInterface)
+			if (F1PS)
 			{
-				CombatInterface->AddToLevel(1);
-				CombatInterface->LevelUp();
-				MaxXP = GetMaxExperience();
+				// 2. í˜„ì¬ ë ˆë²¨ ê°€ì ¸ì˜¤ê¸°
+				const int32 CurrentLevel = F1PS->GetPlayerLevel();
+
+				// 3. í…Œì´ë¸” ê°’ ì¡°íšŒ ë¡œê·¸
+				float XPRequirement = static_cast<float>(Hero->GetXPRequirement(CurrentLevel));
+
+				UE_LOG(LogTemp, Warning, TEXT("[LevelUp] 2. Current Level: %d, Required XP for Next Level: %f"), CurrentLevel, XPRequirement);
+
+				// ì»¤ë¸Œ í…Œì´ë¸”ì„ ëª» ì½ì—ˆì„ ë•Œ (999999 ë°˜í™˜ ì‹œ) ê²½ê³ 
+				if (XPRequirement > 900000.f)
+				{
+					UE_LOG(LogTemp, Error, TEXT("[LevelUp] ğŸš¨ ERROR: Curve Table not found or Key missing! Check BP_HeroCharacter."));
+				}
+
+				// 4. ë ˆë²¨ì—… ë£¨í”„
+				int32 LoopCount = 0;
+				while (CurrentXP >= XPRequirement)
+				{
+					LoopCount++;
+					UE_LOG(LogTemp, Warning, TEXT("[LevelUp] 3. Level Up Detected! (Loop: %d)"), LoopCount);
+					UE_LOG(LogTemp, Warning, TEXT("   - Before: XP %f / Req %f"), CurrentXP, XPRequirement);
+
+					// ì°¨ê°
+					CurrentXP -= XPRequirement;
+					UE_LOG(LogTemp, Warning, TEXT("   - After Deduct: XP is now %f"), CurrentXP);
+
+					// ë ˆë²¨ì—… ì‹¤í–‰
+					Hero->AddToLevel(1);
+					Hero->LevelUp();
+
+					// ë‹¤ìŒ ë ˆë²¨ ìš”êµ¬ëŸ‰ ê°±ì‹ 
+					int32 NextLevel = F1PS->GetPlayerLevel();
+					XPRequirement = static_cast<float>(Hero->GetXPRequirement(NextLevel));
+
+					UE_LOG(LogTemp, Warning, TEXT("   - New Level is: %d, New Requirement: %f"), NextLevel, XPRequirement);
+				}
+
+				// 5. ìµœì¢… ê²°ê³¼ ë°˜ì˜ ë¡œê·¸
+				UE_LOG(LogTemp, Warning, TEXT("[LevelUp] 4. Loop Finished. Setting Attributes..."));
+				UE_LOG(LogTemp, Warning, TEXT("   - Final MaxXP Set To: %f"), XPRequirement);
+				UE_LOG(LogTemp, Warning, TEXT("   - Final CurrentXP Set To: %f"), CurrentXP);
+
+				// UI ìµœëŒ€ê²½í—˜ì¹˜ ë™ê¸°í™”
+				SetMaxExperience(XPRequirement);
+
+				// ë‚¨ì€ ê²½í—˜ì¹˜ ì €ì¥
+				SetExperience(CurrentXP);
+			}
+			else
+			{
+				UE_LOG(LogTemp, Error, TEXT("[LevelUp] PlayerState is NULL!"));
 			}
 		}
-		SetExperience(CurrentXP);
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("[LevelUp] Hero Cast Failed!"));
+		}
 	}
 
 	if (Data.EvaluatedData.Attribute == GetGoldAttribute())
@@ -171,28 +219,28 @@ void UF1AttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 
 				if (bFatal)
 				{
-					// [ÇÙ½É] »ç¸Á ÆÇÁ¤ÀÌ ³µÀ» ¶§!
+					// [í•µì‹¬] ì‚¬ë§ íŒì •ì´ ë‚¬ì„ ë•Œ!
 					UE_LOG(LogTemp, Error, TEXT("[AttributeSet] Monster DIED! calling GiveReward..."));
 
-					// 0. Å³·¯¿Í Èñ»ıÀÚ ½Äº°
+					// 0. í‚¬ëŸ¬ì™€ í¬ìƒì ì‹ë³„
 					AActor* Killer = Props.SourceAvatarActor;
 					AActor* Victim = Props.TargetAvatarActor;
 
-					// 1. VictimÀ» CharacterBase·Î Ä³½ºÆÃÇØ¼­ º¸»ó GE Å¬·¡½º¸¦ °¡Á®¿È
+					// 1. Victimì„ CharacterBaseë¡œ ìºìŠ¤íŒ…í•´ì„œ ë³´ìƒ GE í´ë˜ìŠ¤ë¥¼ ê°€ì ¸ì˜´
 					TSubclassOf<UGameplayEffect> RewardClass = nullptr;
 					if (AF1CharacterBase* VictimChar = Cast<AF1CharacterBase>(Victim))
 					{
 						RewardClass = VictimChar->GetKillRewardEffectClass();
 					}
 
-					// 2. º¸»ó Áö±Ş ÇÔ¼ö È£Ãâ
-					// (RewardClass°¡ nullÀÌ¸é ÇÔ¼ö ³»ºÎ¿¡¼­ °É·¯Áü)
+					// 2. ë³´ìƒ ì§€ê¸‰ í•¨ìˆ˜ í˜¸ì¶œ
+					// (RewardClassê°€ nullì´ë©´ í•¨ìˆ˜ ë‚´ë¶€ì—ì„œ ê±¸ëŸ¬ì§)
 					UF1AbilitySystemLibrary::GiveReward(Killer, Victim, RewardClass);
 
-					// 3. »ç¸Á Ã³¸®
+					// 3. ì‚¬ë§ ì²˜ë¦¬
 					if (CombatInterface)
 					{
-						CombatInterface->Die(); // ÀÌÁ¦ Á×¾î¶ó!
+						CombatInterface->Die(); // ì´ì œ ì£½ì–´ë¼!
 					}
 				}
 			}
@@ -204,7 +252,7 @@ void UF1AttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 }
 
 // ===========================================
-// OnRep ÇÔ¼öµé ±¸Çö
+// OnRep í•¨ìˆ˜ë“¤ êµ¬í˜„
 // ===========================================
 
 void UF1AttributeSet::OnRep_Health(const FGameplayAttributeData& OldHealth) const
@@ -351,18 +399,18 @@ void UF1AttributeSet::OnRep_Experience(const FGameplayAttributeData& OldExperien
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UF1AttributeSet, Experience, OldExperience);
 
-	// [µğ¹ö±ë] ÇöÀç °ª - ÀÌÀü °ª = È¹µæ·®
+	// [ë””ë²„ê¹…] í˜„ì¬ ê°’ - ì´ì „ ê°’ = íšë“ëŸ‰
 	float CurrentXP = GetExperience();
 	float OldXP = OldExperience.GetCurrentValue();
 	float DeltaXP = CurrentXP - OldXP;
 
 	if (DeltaXP > 0.f)
 	{
-		// È­¸é¿¡ ¶ç¿ì±â (ÃÊ·Ï»ö)
+		// í™”ë©´ì— ë„ìš°ê¸° (ì´ˆë¡ìƒ‰)
 		GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green,
 			FString::Printf(TEXT("Client: Gained %f XP! (Total: %f)"), DeltaXP, CurrentXP));
 
-		// ·Î±×Ã¢¿¡ ³²±â±â
+		// ë¡œê·¸ì°½ì— ë‚¨ê¸°ê¸°
 		UE_LOG(LogTemp, Warning, TEXT("[Client] OnRep_Experience: +%f (Total: %f)"), DeltaXP, CurrentXP);
 	}
 }
@@ -382,7 +430,7 @@ void UF1AttributeSet::OnRep_Gold(const FGameplayAttributeData& OldGold) const
 
 	if (DeltaGold > 0.f)
 	{
-		// È­¸é¿¡ ¶ç¿ì±â (³ë¶õ»ö)
+		// í™”ë©´ì— ë„ìš°ê¸° (ë…¸ë€ìƒ‰)
 		GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Yellow,
 			FString::Printf(TEXT("Client: Gained %f Gold! (Total: %f)"), DeltaGold, CurrentGold));
 	}

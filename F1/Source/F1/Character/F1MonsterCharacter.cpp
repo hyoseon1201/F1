@@ -108,6 +108,25 @@ AActor* AF1MonsterCharacter::GetCombatTarget_Implementation() const
     return CombatTarget;
 }
 
+void AF1MonsterCharacter::MulticastHandleDeath_Implementation()
+{
+    // 1. 부모의 기능(래그돌, 애니 중단 등)을 먼저 실행!
+    Super::MulticastHandleDeath_Implementation();
+
+    // 2. [몬스터 전용] AI 끄기
+    if (AAIController* AIC = Cast<AAIController>(GetController()))
+    {
+        AIC->StopMovement();
+        if (AIC->GetBrainComponent())
+        {
+            AIC->GetBrainComponent()->StopLogic("Dead");
+        }
+    }
+
+    // 3. [몬스터 전용] 5초 뒤 삭제
+    SetLifeSpan(5.0f);
+}
+
 void AF1MonsterCharacter::InitUI()
 {
     // 부모 클래스의 로직(있다면) 실행

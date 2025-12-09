@@ -28,6 +28,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Character")
 	void SetCharacterClass(FName CharacterRowName);
 
+	int32 GetXPRequirement(int32 Level) const;
+
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Data")
 	UDataTable* CharacterClassDataTable = nullptr;
@@ -37,8 +39,6 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attributes")
 	TObjectPtr<UCurveTable> LevelUpInfoTable;
-
-	int32 GetXPRequirement(int32 Level) const;
 
 	UFUNCTION()
 	void OnRep_CurrentCharacterInfo();
@@ -51,8 +51,6 @@ protected:
 	// Combat System
 	// ===========================================
 protected:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat")
-	float LifeSpan = 5.f;
 
 	virtual void UpdateCombatSocketsFromCharacterInfo() override;
 
@@ -72,6 +70,7 @@ public:
 	virtual void ApplyLevelBasedGrowth() override;
 
 	virtual FVector GetCombatSocketLocation() override;
+	virtual void MulticastHandleDeath_Implementation() override;
 
 	virtual void Die() override;
 

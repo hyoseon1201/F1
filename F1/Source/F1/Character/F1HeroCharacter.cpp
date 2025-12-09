@@ -254,9 +254,17 @@ FVector AF1HeroCharacter::GetCombatSocketLocation()
     return Super::GetCombatSocketLocation();
 }
 
+void AF1HeroCharacter::MulticastHandleDeath_Implementation()
+{
+    // 1. 공통 기능 실행 (래그돌, 애니메이션 정지, GAS 취소)
+    Super::MulticastHandleDeath_Implementation();
+
+    // TODO : 2. 플레이어 입력차단 및 리스폰 타이머 시작 등등 로직 
+}
+
 void AF1HeroCharacter::Die()
 {
-    SetLifeSpan(LifeSpan);
+    SetLifeSpan(LifeSpan); // TDOD: 부활로직 이후 삭제 예정
     Super::Die();
 }
 
@@ -366,14 +374,23 @@ void AF1HeroCharacter::UpdateCombatSocketsFromCharacterInfo()
 
 void AF1HeroCharacter::InitAbilityActorInfo()
 {
-    AF1PlayerState* F1PlayerState = GetPlayerState<AF1PlayerState>();
-    if (!F1PlayerState) return;
+    AF1PlayerState* F1PS = GetPlayerState<AF1PlayerState>();
+    if (!F1PS) return;
 
     // 1. GAS 연결 (Owner: PlayerState, Avatar: Character)
-    F1PlayerState->GetAbilitySystemComponent()->InitAbilityActorInfo(F1PlayerState, this);
-    Cast<UF1AbilitySystemComponent>(F1PlayerState->GetAbilitySystemComponent())->AbilityActorInfoSet();
+    F1PS->GetAbilitySystemComponent()->InitAbilityActorInfo(F1PS, this);
+    Cast<UF1AbilitySystemComponent>(F1PS->GetAbilitySystemComponent())->AbilityActorInfoSet();
 
     // 2. 포인터 설정
-    AbilitySystemComponent = F1PlayerState->GetAbilitySystemComponent();
-    AttributeSet = F1PlayerState->GetAttributeSet();
+    AbilitySystemComponent = F1PS->GetAbilitySystemComponent();
+    AttributeSet = F1PS->GetAttributeSet();
+
+    F1PS->SetPlayerLevel(F1PS->GetPlayerLevel());
+
+    if (UF1AttributeSet* AS = Cast<UF1AttributeSet>(GetAttributeSet()))
+    {
+        // 시작 레벨(1)에 맞는 MaxXP(1000)를 강제로 세팅
+        float InitMaxXP = static_cast<float>(GetXPRequirement(F1PS->GetPlayerLevel()));
+        AS->SetMaxExperience(InitMaxXP);
+    }
 }

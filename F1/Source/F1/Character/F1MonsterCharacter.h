@@ -30,8 +30,8 @@ protected:
 	// Combat System
 	// ===========================================
 protected:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat")
-	float LifeSpan = 5.f;
+	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat")
+	//float LifeSpan = 5.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	float DefaultAttackRange = 150.0f;
@@ -50,6 +50,7 @@ public:
 	virtual void SetCombatTarget(AActor* InTarget) override;
 	virtual void Attack() override;
 	virtual AActor* GetCombatTarget_Implementation() const override;
+	virtual void MulticastHandleDeath_Implementation() override;
 
 protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Combat")
