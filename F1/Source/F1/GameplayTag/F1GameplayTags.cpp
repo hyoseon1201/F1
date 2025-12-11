@@ -342,4 +342,18 @@ void FF1GameplayTags::InitializeNativeGameplayTags()
         FName("Attributes.Meta.Gold"),
         FString("Tag for setting Gold reward amount")
     );
+
+    // ===========================================
+    // CharacterType
+    // ===========================================
+
+    GameplayTags.CharacterType_Hero = Manager.AddNativeGameplayTag(
+        FName("CharacterType.Hero"),
+        FString("Hero Type")
+    );
+
+    GameplayTags.CharacterType_Monster = Manager.AddNativeGameplayTag(
+        FName("CharacterType.Monster"),
+        FString("Monster Type")
+    );
 }

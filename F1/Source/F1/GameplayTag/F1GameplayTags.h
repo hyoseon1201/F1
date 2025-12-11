@@ -126,6 +126,12 @@ public:
     FGameplayTag Attributes_Meta_Experience;
     FGameplayTag Attributes_Meta_Gold;
 
+    // ===========================================
+    // CharacterType
+    // ===========================================
+    FGameplayTag CharacterType_Hero;
+    FGameplayTag CharacterType_Monster;
+
 private:
     static FF1GameplayTags GameplayTags;
 };
