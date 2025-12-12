@@ -46,6 +46,8 @@ void AF1MeteorCircle::BeginPlay()
 	// MagicCircleMesh->SetWorldScale3D(FVector(Scale, Scale, 1.0f));
 
 	GetWorldTimerManager().SetTimer(TimerHandle_Damage, this, &AF1MeteorCircle::ApplyPeriodicDamage, DamagePeriod, true);
+
+	SetLifeSpan(5.0f);
 }
 
 void AF1MeteorCircle::ApplyPeriodicDamage()
