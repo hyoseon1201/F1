@@ -6,12 +6,9 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
 #include "GameplayTag/F1GameplayTags.h"
-
-// 필수 헤더들
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
-#include "Components/PrimitiveComponent.h" // 충돌 무시용
-#include "DrawDebugHelpers.h"              // 디버깅용
+#include "Components/PrimitiveComponent.h"
 
 void UF1ProjectileSpell::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 	const FGameplayAbilityActorInfo* ActorInfo,
@@ -19,7 +16,6 @@ void UF1ProjectileSpell::ActivateAbility(const FGameplayAbilitySpecHandle Handle
 	const FGameplayEventData* TriggerEventData)
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
-	UE_LOG(LogTemp, Warning, TEXT("My Cooldown Tags: %s"), *GetCooldownTags()->ToString());
 }
 
 // ============================================================================
@@ -207,10 +203,6 @@ void UF1ProjectileSpell::SpawnArcProjectile(const FVector& TargetLocation, float
 		}
 	}
 
-	// [디버그] 시각적 확인
-	DrawDebugSphere(GetWorld(), SocketLocation, 20.0f, 12, FColor::Green, false, 3.0f);
-	DrawDebugSphere(GetWorld(), AdjustedTarget, 20.0f, 12, FColor::Red, false, 3.0f);
-
 	// [로직 3] 탄도학 계산
 	bool bHaveSolution = UGameplayStatics::SuggestProjectileVelocity(
 		this,
@@ -288,7 +280,6 @@ void UF1ProjectileSpell::SpawnArcProjectile(const FVector& TargetLocation, float
 		const FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(DamageEffectClass, GetAbilityLevel(), EffectContextHandle);
 		const float ScaledDamage = Damage.GetValueAtLevel(GetAbilityLevel());
 
-		// 태그 주의 (프로젝트에 맞게 수정)
 		UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, FF1GameplayTags::Get().DamageType_Physical, ScaledDamage);
 
 		Projectile->DamageEffectSpecHandle = SpecHandle;
