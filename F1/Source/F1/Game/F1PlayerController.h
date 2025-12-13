@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -7,11 +5,14 @@
 #include "GameplayTagContainer.h"
 #include "F1PlayerController.generated.h"
 
-class AF1CharacterBase;
+class UInputMappingContext;
+class UInputAction;
+struct FInputActionValue;
 class UF1InputConfig;
 class UF1AbilitySystemComponent;
 class USplineComponent;
-class UDamageTextComponent;
+class UDamageTextComponent; // 전방 선언 확인
+class AF1CharacterBase;
 
 UCLASS()
 class F1_API AF1PlayerController : public APlayerController
@@ -21,63 +22,35 @@ class F1_API AF1PlayerController : public APlayerController
 public:
 	AF1PlayerController();
 
-	UFUNCTION(BlueprintCallable)
-	void StartAbilityMovementToDestination(const FVector& Destination);
-
-	virtual void PlayerTick(float DeltaTime) override;
-
-	UFUNCTION(BlueprintCallable, Category = "Movement")
-	void StartMovementToDestination();
-
-	UFUNCTION(BlueprintCallable)
-	bool IsAutoRunning() const { return bAutoRunning; }
-
+	virtual void Tick(float DeltaTime) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	// [RPC] 서버에 타겟 설정 요청
+	UFUNCTION(Server, Reliable)
+	void Server_SetTargetEnemy(AActor* NewTarget);
+
+	// [RPC] 클라 이동 경로 동기화
+	UFUNCTION(Client, Reliable)
+	void Client_MoveToPoints(const TArray<FVector>& PathPoints);
+
+	// [RPC] 클라 회전 동기화 (공격 시)
+	UFUNCTION(Client, Reliable)
+	void Client_FaceTarget(AActor* TargetToFace);
+
+	// [RPC] 데미지 폰트 출력 (복구됨!)
+	UFUNCTION(Client, Reliable)
+	void ShowDamageNumber(float DamageAmount, ACharacter* TargetCharacter, bool bCriticalHit);
 
 protected:
 	virtual void BeginPlay() override;
 	virtual void SetupInputComponent() override;
+	virtual void OnPossess(APawn* InPawn) override;
 
 private:
 	UPROPERTY(EditAnywhere, Category = "Input")
-	TObjectPtr<class UInputMappingContext> F1Context;
+	TObjectPtr<UInputMappingContext> F1Context;
 
-	UPROPERTY(EditDefaultsOnly)
-	float AutoRunAcceptanceRadius = 50.f;
-
-	UPROPERTY(VisibleAnywhere)
-	TObjectPtr<USplineComponent> Spline;
-
-	UPROPERTY(Replicated)
-	FVector CachedDestination = FVector::ZeroVector;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Combat", meta = (AllowPrivateAccess = true))
-	TObjectPtr<AActor> TargetEnemy = nullptr;
-
-	float FollowTime = 0.f;
-	float ShortPressThreshold = 0.5f;
-
-	UPROPERTY(Replicated)
-	bool bAutoRunning = false;
-
-	void AutoRun();
-	void TraceAndAttackTarget();
-
-	// ===========================================
-	// Cursor Trace
-	// ===========================================
-private:
-	void CursorTrace();
-
-	AF1CharacterBase* LastActor = nullptr;
-	AF1CharacterBase* ThisActor = nullptr;
-	FHitResult CursorHit;
-
-	// ===========================================
-	// Input
-	// ===========================================
-private:
-	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	UPROPERTY(EditAnywhere, Category = "Input")
 	TObjectPtr<UF1InputConfig> InputConfig;
 
 	UPROPERTY()
@@ -86,17 +59,52 @@ private:
 	UF1AbilitySystemComponent* GetASC();
 
 	void AbilityInputTagPressed(FGameplayTag InputTag);
-	void AbilityInputTagHeld(FGameplayTag InputTag);
 	void AbilityInputTagReleased(FGameplayTag InputTag);
+	void AbilityInputTagHeld(FGameplayTag InputTag);
 
-	// ===========================================
-	// Damage
-	// ===========================================
-public:
-	UFUNCTION(Client, Reliable)
-	void ShowDamageNumber(float DamageAmount, ACharacter* TargetCharacter, bool bCriticalHit);
+	void AutoRun();
+	void TraceAndAttackTarget();
+	void StartMovementToDestination();
 
-private:
-	UPROPERTY(EditDefaultsOnly)
+	void CursorTrace();
+	bool IsEnemy(AActor* Target);
+	AActor* GetTargetUnderCursorWithAssist();
+
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<USplineComponent> Spline;
+
+	UPROPERTY(Replicated)
+	FVector CachedDestination = FVector::ZeroVector;
+
+	UPROPERTY(VisibleAnywhere, Replicated)
+	bool bAutoRunning = false;
+
+	UPROPERTY(Replicated)
+	TObjectPtr<AActor> TargetEnemy = nullptr;
+
+	// [회전용] 부드러운 회전을 위한 타겟 참조
+	TWeakObjectPtr<AActor> FaceTargetActor;
+
+	float FollowTime = 0.f;
+	float ShortPressThreshold = 0.2f;
+
+	// 공격 명령 스팸 방지 타이머
+	float LastAttackTime = 0.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Movement")
+	float AutoRunAcceptanceRadius = 50.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Combat")
+	float TargetingAssistRadius = 90.0f;
+
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<AActor> ThisActor;
+
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<AActor> LastActor;
+
+	FHitResult CursorHit;
+
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UDamageTextComponent> DamageTextComponentClass;
 };

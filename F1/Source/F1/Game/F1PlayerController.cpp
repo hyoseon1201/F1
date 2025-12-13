@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "Game/F1PlayerController.h"
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
@@ -13,380 +11,527 @@
 #include "NavigationSystem.h"
 #include "Net/UnrealNetwork.h"
 #include "GameFramework/Character.h"
-#include "UI/Widget/DamageTextComponent.h"
+#include "UI/Widget/DamageTextComponent.h" // 헤더 포함 확인!
 #include "Blueprint/AIBlueprintHelperLibrary.h"
 #include "GenericTeamAgentInterface.h"
+#include "Engine/OverlapResult.h"
+#include "Interaction/F1TeamOutlineInterface.h"
+#include "GameFramework/CharacterMovementComponent.h" // 회전 제어용
+#include "Kismet/KismetMathLibrary.h" // 각도 계산용
 
 AF1PlayerController::AF1PlayerController()
 {
-    bReplicates = true;
-    Spline = CreateDefaultSubobject<USplineComponent>("Spline");
-}
+	bReplicates = true;
+	Spline = CreateDefaultSubobject<USplineComponent>("Spline");
 
-void AF1PlayerController::PlayerTick(float DeltaTime)
-{
-    Super::PlayerTick(DeltaTime);
-
-    if (IsLocalPlayerController())
-    {
-        CursorTrace(); // Aura 방식: 매 틱마다 커서 트레이스
-        AutoRun();
-
-        TraceAndAttackTarget();
-    }
+	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bStartWithTickEnabled = true;
 }
 
 void AF1PlayerController::BeginPlay()
 {
-    Super::BeginPlay();
-    check(F1Context);
+	Super::BeginPlay();
+	check(F1Context);
 
-    UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer());
-    if (Subsystem) Subsystem->AddMappingContext(F1Context, 0);
+	if (!PrimaryActorTick.IsTickFunctionRegistered())
+	{
+		PrimaryActorTick.bCanEverTick = true;
+		PrimaryActorTick.RegisterTickFunction(GetLevel());
+	}
+	SetActorTickEnabled(true);
 
-    bShowMouseCursor = true;
-    DefaultMouseCursor = EMouseCursor::Default;
+	UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer());
+	if (Subsystem) Subsystem->AddMappingContext(F1Context, 0);
 
-    FInputModeGameAndUI InputModeData;
-    InputModeData.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-    InputModeData.SetHideCursorDuringCapture(false);
-    SetInputMode(InputModeData);
+	bShowMouseCursor = true;
+	DefaultMouseCursor = EMouseCursor::Default;
+
+	FInputModeGameAndUI InputModeData;
+	InputModeData.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	InputModeData.SetHideCursorDuringCapture(false);
+	SetInputMode(InputModeData);
+}
+
+void AF1PlayerController::OnPossess(APawn* InPawn)
+{
+	Super::OnPossess(InPawn);
+	SetActorTickEnabled(true);
+}
+
+void AF1PlayerController::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	// 1. [서버] 두뇌 역할
+	if (HasAuthority() || IsLocalPlayerController())
+	{
+		TraceAndAttackTarget();
+	}
+
+	// 2. [클라이언트] 행동 대장
+	if (IsLocalPlayerController())
+	{
+		CursorTrace();
+		AutoRun();
+
+		// [회전] 부드러운 회전 로직 (공격 타겟 주시)
+		APawn* ControlledPawn = GetPawn();
+		if (ControlledPawn)
+		{
+			if (FaceTargetActor.IsValid())
+			{
+				if (UCharacterMovementComponent* CMC = ControlledPawn->FindComponentByClass<UCharacterMovementComponent>())
+				{
+					CMC->bOrientRotationToMovement = false; // 이동 회전 끄기
+				}
+
+				FVector MyLoc = ControlledPawn->GetActorLocation();
+				FVector TargetLoc = FaceTargetActor->GetActorLocation();
+				FRotator LookAtRotation = UKismetMathLibrary::FindLookAtRotation(MyLoc, TargetLoc);
+				FRotator TargetRotation = FRotator(0.f, LookAtRotation.Yaw, 0.f);
+
+				// 부드럽게 회전
+				FRotator NewRotation = FMath::RInterpTo(ControlledPawn->GetActorRotation(), TargetRotation, DeltaTime, 20.0f);
+				ControlledPawn->SetActorRotation(NewRotation);
+			}
+			else
+			{
+				// 타겟 없으면 다시 이동 방향 보기
+				if (UCharacterMovementComponent* CMC = ControlledPawn->FindComponentByClass<UCharacterMovementComponent>())
+				{
+					CMC->bOrientRotationToMovement = true;
+				}
+			}
+		}
+	}
 }
 
 void AF1PlayerController::SetupInputComponent()
 {
-    Super::SetupInputComponent();
-
-    UF1InputComponent* F1InputComponent = CastChecked<UF1InputComponent>(InputComponent);
-    F1InputComponent->BindAbilityActions(InputConfig, this, &ThisClass::AbilityInputTagPressed, &ThisClass::AbilityInputTagReleased, &ThisClass::AbilityInputTagHeld);
+	Super::SetupInputComponent();
+	UF1InputComponent* F1InputComponent = CastChecked<UF1InputComponent>(InputComponent);
+	F1InputComponent->BindAbilityActions(InputConfig, this, &ThisClass::AbilityInputTagPressed, &ThisClass::AbilityInputTagReleased, &ThisClass::AbilityInputTagHeld);
 }
 
-void AF1PlayerController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
-{
-    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+// ==============================================================================
+//  RPC Implementation
+// ==============================================================================
 
-    DOREPLIFETIME(AF1PlayerController, bAutoRunning);
-    DOREPLIFETIME(AF1PlayerController, CachedDestination);
+void AF1PlayerController::Server_SetTargetEnemy_Implementation(AActor* NewTarget)
+{
+	if (TargetEnemy == NewTarget) return;
+	TargetEnemy = NewTarget;
+
+	if (TargetEnemy)
+	{
+		StopMovement();
+	}
 }
 
-void AF1PlayerController::StartMovementToDestination()
+void AF1PlayerController::Client_MoveToPoints_Implementation(const TArray<FVector>& PathPoints)
 {
-    if (GetASC())
-    {
-        FGameplayTagContainer CancelTags;
-        CancelTags.AddTag(FGameplayTag::RequestGameplayTag("Ability"));
-        GetASC()->CancelAbilities(&CancelTags);
-    }
+	Spline->ClearSplinePoints();
+	for (const FVector& PointLoc : PathPoints)
+	{
+		Spline->AddSplinePoint(PointLoc, ESplineCoordinateSpace::World);
+	}
 
-    const APawn* ControlledPawn = GetPawn();
-    if (!ControlledPawn) return;
-
-    const FVector StartLocation = ControlledPawn->GetActorLocation();
-
-    if (UNavigationPath* NavPath = UNavigationSystemV1::FindPathToLocationSynchronously(
-        this, StartLocation, CachedDestination))
-    {
-        if (NavPath->PathPoints.Num() > 0)
-        {
-            Spline->ClearSplinePoints();
-
-            for (const FVector& PointLoc : NavPath->PathPoints)
-            {
-                Spline->AddSplinePoint(PointLoc, ESplineCoordinateSpace::World);
-            }
-
-            if (NavPath->PathPoints.Num() > 0)
-            {
-                CachedDestination = NavPath->PathPoints.Last();
-                bAutoRunning = true;
-            }
-        }
-    }
+	if (PathPoints.Num() > 0)
+	{
+		CachedDestination = PathPoints.Last();
+		bAutoRunning = true;
+	}
 }
 
-void AF1PlayerController::StartAbilityMovementToDestination(const FVector& Destination)
+void AF1PlayerController::Client_FaceTarget_Implementation(AActor* TargetToFace)
 {
-    CachedDestination = Destination;
-    StartMovementToDestination();
-}
-
-void AF1PlayerController::AutoRun()
-{
-    if (!bAutoRunning) return;
-
-    if (APawn* ControlledPawn = GetPawn())
-    {
-        // Aura 방식: Spline 경로 기반 이동
-        const FVector LocationOnSpline = Spline->FindLocationClosestToWorldLocation(
-            ControlledPawn->GetActorLocation(), ESplineCoordinateSpace::World);
-        const FVector Direction = Spline->FindDirectionClosestToWorldLocation(
-            LocationOnSpline, ESplineCoordinateSpace::World);
-
-        ControlledPawn->AddMovementInput(Direction);
-
-        const float DistanceToDestination = (LocationOnSpline - CachedDestination).Length();
-        if (DistanceToDestination <= AutoRunAcceptanceRadius)
-        {
-            bAutoRunning = false;
-        }
-    }
-}
-
-void AF1PlayerController::TraceAndAttackTarget()
-{
-    // 타겟이 없으면 리턴
-    if (!TargetEnemy) return;
-
-    // 타겟이 죽었거나 사라졌으면 추적 중지
-    // (죽었는지 확인하는 로직은 Interface나 Tag로 추가 확인 권장)
-    if (!IsValid(TargetEnemy))
-    {
-        TargetEnemy = nullptr;
-        return;
-    }
-
-    APawn* ControlledPawn = GetPawn();
-    if (!ControlledPawn) return;
-
-    if (GetASC())
-    {
-        // "Ability.State.Attacking" 태그가 있으면(즉, 공격 모션 중이면) 리턴
-        // 혹은 쿨타임 태그가 있어도 리턴하게 하면 더 좋습니다.
-        FGameplayTag AttackingTag = FGameplayTag::RequestGameplayTag("Ability.State.Attacking");
-        FGameplayTag CooldownTag = FGameplayTag::RequestGameplayTag("Cooldown.Attack"); // 본인 쿨타임 태그
-
-        if (GetASC()->HasMatchingGameplayTag(AttackingTag) ||
-            GetASC()->HasMatchingGameplayTag(CooldownTag))
-        {
-            return; // "아직 공격 안 끝났거나 쿨타임이다. 진정해라."
-        }
-    }
-
-    // 1. 거리 계산
-    float Distance = ControlledPawn->GetDistanceTo(TargetEnemy);
-
-    // 공격 사거리 (나중에는 스탯에서 가져와야 함. 예: 600.f)
-    // 약간의 여유(-50)를 둬서 사거리 끝자락에서 버벅이지 않게 함
-    float AttackRange = 600.0f;
-
-    if (Distance <= AttackRange - 50.0f)
-    {
-        // A. 사거리 안: 멈추고 공격!
-        StopMovement(); // 이동 멈춤
-
-        // 회전: 적을 바라보게 함
-        FVector LookAt = TargetEnemy->GetActorLocation() - ControlledPawn->GetActorLocation();
-        LookAt.Z = 0.f;
-        ControlledPawn->SetActorRotation(LookAt.Rotation());
-
-        // B. GAS 어빌리티 발동
-        if (GetASC())
-        {
-            // Payload에 타겟 정보를 실어서 보냄
-            FGameplayEventData Payload;
-            Payload.Instigator = ControlledPawn;
-            Payload.Target = TargetEnemy;
-
-            // 태그로 어빌리티 발동 시도 (GA_Attack에 Trigger Tag로 Ability.Attack 설정 필요)
-            // TryActivateAbilitiesByTag는 Payload를 못 보내므로, SendGameplayEventToActor 사용 권장
-
-            // 방법 1: Event로 발동 (추천) -> GA_Attack의 Trigger를 'GameplayEvent'로 설정
-            UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
-                ControlledPawn,
-                FF1GameplayTags::Get().Event_Combat_Attack,
-                Payload
-            );
-        }
-    }
-    else
-    {
-        // C. 사거리 밖: 추적 이동
-        // Spline 이동이 아니라 AI Navigation 이동을 사용해야 움직이는 적을 잘 쫓아감
-        UAIBlueprintHelperLibrary::SimpleMoveToActor(this, TargetEnemy);
-    }
-}
-
-void AF1PlayerController::CursorTrace()
-{
-    GetHitResultUnderCursor(ECC_Visibility, false, CursorHit);
-    if (!CursorHit.bBlockingHit) return;
-
-    LastActor = ThisActor;
-    ThisActor = nullptr;
-
-    if (AActor* HitActor = CursorHit.GetActor())
-    {
-        if (AF1CharacterBase* HitCharacter = Cast<AF1CharacterBase>(HitActor))
-        {
-            ThisActor = HitCharacter;
-        }
-    }
-
-    // 하이라이트 처리
-    if (LastActor != ThisActor)
-    {
-        if (LastActor) LastActor->UnHighlightActor();
-        if (ThisActor) ThisActor->HighlightActor();
-    }
-}
-
-UF1AbilitySystemComponent* AF1PlayerController::GetASC()
-{
-    if (F1AbilitySystemComponent == nullptr)
-    {
-        F1AbilitySystemComponent = Cast<UF1AbilitySystemComponent>(
-            UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetPawn<APawn>()));
-    }
-    return F1AbilitySystemComponent;
-}
-
-void AF1PlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
-{
-    // RMB가 아닌 다른 입력은 AbilitySystem으로 전달
-    if (!InputTag.MatchesTagExact(FF1GameplayTags::Get().InputTag_RMB))
-    {
-        if (GetASC())
-        {
-            GetASC()->AbilityInputTagPressed(InputTag);
-        }
-
-        if (InputTag.MatchesTagExact(FF1GameplayTags::Get().InputTag_LMB) ||
-            InputTag.MatchesTagExact(FF1GameplayTags::Get().InputTag_Q) ||
-            InputTag.MatchesTagExact(FF1GameplayTags::Get().InputTag_W) ||
-            InputTag.MatchesTagExact(FF1GameplayTags::Get().InputTag_E) ||
-            InputTag.MatchesTagExact(FF1GameplayTags::Get().InputTag_R))
-        {
-            bAutoRunning = false;
-        }
-
-        return;
-    }
-
-    // RMB Pressed: 자동 이동 중지
-    bAutoRunning = false;
-    TargetEnemy = nullptr;
-}
-
-void AF1PlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
-{
-    // RMB가 아닌 다른 입력은 AbilitySystem으로 전달
-    if (!InputTag.MatchesTagExact(FF1GameplayTags::Get().InputTag_RMB))
-    {
-        if (GetASC()) GetASC()->AbilityInputTagHeld(InputTag);
-        return;
-    }
-
-    TargetEnemy = nullptr;
-
-    if (GetASC())
-    {
-        FGameplayTagContainer CancelTags;
-        CancelTags.AddTag(FGameplayTag::RequestGameplayTag("Ability")); // 모든 어빌리티 취소
-
-        GetASC()->CancelAbilities(&CancelTags);
-    }
-
-    // RMB Held: 드래그 이동
-    FollowTime += GetWorld()->GetDeltaSeconds();
-
-    if (CursorHit.bBlockingHit)
-    {
-        CachedDestination = CursorHit.ImpactPoint;
-    }
-
-    if (APawn* ControlledPawn = GetPawn())
-    {
-        const FVector WorldDirection = (CachedDestination - ControlledPawn->GetActorLocation()).GetSafeNormal();
-        ControlledPawn->AddMovementInput(WorldDirection);
-    }
-}
-
-void AF1PlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
-{
-    // RMB가 아닌 다른 입력은 AbilitySystem으로 전달
-    if (!InputTag.MatchesTagExact(FF1GameplayTags::Get().InputTag_RMB))
-    {
-        if (GetASC()) GetASC()->AbilityInputTagReleased(InputTag);
-        return;
-    }
-
-    // 짧은 클릭인 경우에만 이동 명령 실행
-    if (FollowTime <= ShortPressThreshold)
-    {
-        bool bTargetIsEnemy = false;
-        // 1. 커서 아래에 캐릭터가 있을 때만 판별
-        if (ThisActor)
-        {
-            // A. 나(플레이어)와 타겟(적)을 인터페이스로 캐스팅
-            // CharacterBase가 이미 IGenericTeamAgentInterface를 상속받았다고 가정합니다.
-            IGenericTeamAgentInterface* MyTeamAgent = Cast<IGenericTeamAgentInterface>(GetPawn());
-            IGenericTeamAgentInterface* TargetTeamAgent = Cast<IGenericTeamAgentInterface>(ThisActor);
-
-            // B. 둘 다 팀 정보가 있을 때만 비교
-            if (MyTeamAgent && TargetTeamAgent)
-            {
-                // FGenericTeamId는 ==, != 연산자가 오버로딩 되어 있어서 바로 비교 가능합니다.
-                // GetGenericTeamId()는 FGenericTeamId 타입을 반환합니다.
-                FGenericTeamId MyTeamID = MyTeamAgent->GetGenericTeamId();
-                FGenericTeamId TargetTeamID = TargetTeamAgent->GetGenericTeamId();
-
-                // [핵심] 팀이 다르고, 타겟이 '중립(NoTeam)'이 아니라면 적으로 간주
-                if (MyTeamID != TargetTeamID && TargetTeamID != FGenericTeamId::NoTeam)
-                {
-                    bTargetIsEnemy = true;
-                }
-            }
-            // 만약 Pawn에 없고 PlayerState에만 있다면? (혹시 위 캐스팅이 실패할 경우 대비)
-            else
-            {
-                // 안전장치: Pawn이 아니라 PlayerState에서 찾아야 하는 경우
-                // 보통 CharacterBase에서 GetGenericTeamId를 오버라이드해서 
-                // "내 PlayerState의 ID를 리턴해라"라고 짜두는 게 정석입니다.
-                // 작성하신 CharacterBase에 그렇게 되어 있다면 위의 A 로직으로 충분합니다.
-            }
-        }
-
-        if (bTargetIsEnemy)
-        {
-            // [추적 모드 ON] -> 적입니다!
-            TargetEnemy = ThisActor;
-            bAutoRunning = false;
-            Spline->ClearSplinePoints();
-        }
-        else
-        {
-            // [일반 이동] -> 땅이거나 아군입니다.
-            TargetEnemy = nullptr;
-
-            const APawn* ControlledPawn = GetPawn();
-            if (ControlledPawn)
-            {
-                // 커서 아래에 액터가 있으면 그 위치로, 없으면 땅 위치로 이동
-                if (ThisActor)
-                {
-                    CachedDestination = ThisActor->GetActorLocation();
-                }
-                else
-                {
-                    CachedDestination = CursorHit.ImpactPoint;
-                }
-
-                StartMovementToDestination();
-            }
-        }
-    }
-
-    FollowTime = 0.f;
+	// 직접 회전시키지 않고 타겟만 설정 (Tick에서 부드럽게 회전)
+	FaceTargetActor = TargetToFace;
 }
 
 void AF1PlayerController::ShowDamageNumber_Implementation(float DamageAmount, ACharacter* TargetCharacter, bool bCriticalHit)
 {
-    if (IsValid(TargetCharacter) && DamageTextComponentClass)
-    {
-        UDamageTextComponent* DamageText = NewObject<UDamageTextComponent>(TargetCharacter, DamageTextComponentClass);
-        DamageText->RegisterComponent();
-        DamageText->AttachToComponent(TargetCharacter->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
-        DamageText->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
-        DamageText->SetDamageText(DamageAmount, bCriticalHit);
-    }
+	// [복구 완료] 데미지 텍스트 생성 로직
+	if (IsValid(TargetCharacter) && DamageTextComponentClass)
+	{
+		UDamageTextComponent* DamageText = NewObject<UDamageTextComponent>(TargetCharacter, DamageTextComponentClass);
+		DamageText->RegisterComponent();
+		DamageText->AttachToComponent(TargetCharacter->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
+		DamageText->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+		DamageText->SetDamageText(DamageAmount, bCriticalHit);
+	}
+}
+
+void AF1PlayerController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(AF1PlayerController, bAutoRunning);
+	DOREPLIFETIME(AF1PlayerController, CachedDestination);
+	DOREPLIFETIME(AF1PlayerController, TargetEnemy);
+}
+
+// ==============================================================================
+//  Movement & Combat Logic
+// ==============================================================================
+
+void AF1PlayerController::StartMovementToDestination()
+{
+	if (GetASC())
+	{
+		FGameplayTagContainer CancelTags;
+		CancelTags.AddTag(FGameplayTag::RequestGameplayTag("Ability"));
+		GetASC()->CancelAbilities(&CancelTags);
+	}
+
+	const APawn* ControlledPawn = GetPawn();
+	if (!ControlledPawn) return;
+
+	const FVector StartLocation = ControlledPawn->GetActorLocation();
+
+	UNavigationPath* NavPath = UNavigationSystemV1::FindPathToLocationSynchronously(
+		this, StartLocation, CachedDestination);
+
+	if (NavPath && NavPath->PathPoints.Num() > 0)
+	{
+		if (HasAuthority())
+		{
+			bAutoRunning = true;
+			Client_MoveToPoints(NavPath->PathPoints);
+		}
+		else
+		{
+			Spline->ClearSplinePoints();
+			for (const FVector& PointLoc : NavPath->PathPoints)
+			{
+				Spline->AddSplinePoint(PointLoc, ESplineCoordinateSpace::World);
+			}
+			CachedDestination = NavPath->PathPoints.Last();
+			bAutoRunning = true;
+		}
+	}
+}
+
+void AF1PlayerController::AutoRun()
+{
+	if (!bAutoRunning) return;
+
+	if (APawn* ControlledPawn = GetPawn())
+	{
+		const FVector LocationOnSpline = Spline->FindLocationClosestToWorldLocation(
+			ControlledPawn->GetActorLocation(), ESplineCoordinateSpace::World);
+		const FVector Direction = Spline->FindDirectionClosestToWorldLocation(
+			LocationOnSpline, ESplineCoordinateSpace::World);
+
+		ControlledPawn->AddMovementInput(Direction);
+
+		const float DistanceToDestination = (LocationOnSpline - CachedDestination).Length();
+		if (DistanceToDestination <= AutoRunAcceptanceRadius)
+		{
+			bAutoRunning = false;
+		}
+	}
+}
+
+void AF1PlayerController::TraceAndAttackTarget()
+{
+	// 타겟이 없거나 유효하지 않으면 리턴
+	if (!TargetEnemy || !IsValid(TargetEnemy))
+	{
+		TargetEnemy = nullptr;
+		return;
+	}
+
+	APawn* ControlledPawn = GetPawn();
+	if (!ControlledPawn) return;
+
+	// (옵션) 클라이언트 오토런 해제 조건
+	if (bAutoRunning && ControlledPawn->GetVelocity().SizeSquared() < 10.0f)
+	{
+		bAutoRunning = false;
+	}
+
+	float Distance = ControlledPawn->GetDistanceTo(TargetEnemy);
+	float AttackRange = 600.0f; // 나중에 스탯 적용
+
+	// ====================================================
+	// 1. 공격 범위 안 (Attack Phase) -> [클라/서버 모두 실행]
+	// ====================================================
+	if (Distance <= AttackRange - 50.0f)
+	{
+		// 쿨타임 체크 (스팸 방지)
+		double CurrentTime = GetWorld()->GetTimeSeconds();
+		if (CurrentTime - LastAttackTime < 0.5f) return;
+
+		// [이동 정지]
+		if (HasAuthority())
+		{
+			Client_MoveToPoints(TArray<FVector>()); // 서버 -> 클라 정지 명령
+		}
+		else
+		{
+			// 클라이언트 예측 정지
+			bAutoRunning = false;
+			Spline->ClearSplinePoints();
+			StopMovement();
+		}
+
+		// [회전]
+		FVector LookAt = TargetEnemy->GetActorLocation() - ControlledPawn->GetActorLocation();
+		LookAt.Z = 0.f;
+		ControlledPawn->SetActorRotation(LookAt.Rotation());
+
+		if (HasAuthority()) Client_FaceTarget(TargetEnemy);
+		else FaceTargetActor = TargetEnemy;
+
+		// ? [핵심] GAS 이벤트 발송 (양쪽 다 실행!) ?
+		// 클라이언트: 즉시 몽타주 재생 (Prediction)
+		// 서버: 실제 데미지/쿨타임 처리
+		if (GetASC())
+		{
+			LastAttackTime = CurrentTime;
+			FGameplayEventData Payload;
+			Payload.Instigator = ControlledPawn;
+			Payload.Target = TargetEnemy;
+			UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
+				ControlledPawn,
+				FF1GameplayTags::Get().Event_Combat_Attack,
+				Payload
+			);
+		}
+	}
+	// ====================================================
+	// 2. 공격 범위 밖 (Chasing Phase) -> [서버만 실행!]
+	// ====================================================
+	else
+	{
+		// ?? 중요: 이동/길찾기 로직은 '서버'만 수행해야 안전합니다.
+		if (HasAuthority())
+		{
+			FVector EnemyLoc = TargetEnemy->GetActorLocation();
+			FVector MyLoc = ControlledPawn->GetActorLocation();
+			FVector DirectionToMe = (MyLoc - EnemyLoc).GetSafeNormal();
+			FVector ShootingPos = EnemyLoc + (DirectionToMe * (AttackRange * 0.7f));
+
+			FNavLocation ProjectedLoc;
+			if (UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(this))
+			{
+				if (NavSys->ProjectPointToNavigation(ShootingPos, ProjectedLoc))
+				{
+					ShootingPos = ProjectedLoc.Location;
+				}
+			}
+
+			float DistToDest = FVector::DistSquared(CachedDestination, ShootingPos);
+
+			// 목적지가 많이 바뀌었을 때만 경로 갱신
+			if (!bAutoRunning || DistToDest > (100.0f * 100.0f))
+			{
+				CachedDestination = ShootingPos;
+				StartMovementToDestination(); // 내부에서 RPC(Client_MoveToPoints)를 호출할 것임
+			}
+		}
+	}
+}
+
+// ==============================================================================
+//  Input Handling
+// ==============================================================================
+
+void AF1PlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
+{
+	if (!InputTag.MatchesTagExact(FF1GameplayTags::Get().InputTag_RMB))
+	{
+		if (GetASC()) GetASC()->AbilityInputTagPressed(InputTag);
+
+		if (InputTag.MatchesTagExact(FF1GameplayTags::Get().InputTag_LMB) ||
+			InputTag.MatchesTagExact(FF1GameplayTags::Get().InputTag_Q) ||
+			InputTag.MatchesTagExact(FF1GameplayTags::Get().InputTag_W) ||
+			InputTag.MatchesTagExact(FF1GameplayTags::Get().InputTag_E) ||
+			InputTag.MatchesTagExact(FF1GameplayTags::Get().InputTag_R))
+		{
+			bAutoRunning = false;
+		}
+		return;
+	}
+
+	// [RMB] 이동 시작 시 회전 타겟 해제
+	bAutoRunning = false;
+	Server_SetTargetEnemy(nullptr);
+	FaceTargetActor = nullptr; // 정면 보기
+}
+
+void AF1PlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
+{
+	if (!InputTag.MatchesTagExact(FF1GameplayTags::Get().InputTag_RMB))
+	{
+		if (GetASC()) GetASC()->AbilityInputTagHeld(InputTag);
+		return;
+	}
+
+	FollowTime += GetWorld()->GetDeltaSeconds();
+	GetHitResultUnderCursor(ECC_Visibility, false, CursorHit);
+
+	// [반응성 개선] 적 클릭 시에만 신중하게 대기
+	if (CursorHit.bBlockingHit && IsEnemy(CursorHit.GetActor()))
+	{
+		if (FollowTime <= ShortPressThreshold) return;
+	}
+
+	// [즉시 이동] 땅 클릭이나 시간 지남
+	Server_SetTargetEnemy(nullptr);
+	FaceTargetActor = nullptr; // 정면 보기
+	bAutoRunning = false;      // AutoRun 끄기
+	Spline->ClearSplinePoints();
+
+	if (GetASC())
+	{
+		FGameplayTagContainer CancelTags;
+		CancelTags.AddTag(FGameplayTag::RequestGameplayTag("Ability"));
+		GetASC()->CancelAbilities(&CancelTags);
+	}
+
+	if (CursorHit.bBlockingHit)
+	{
+		CachedDestination = CursorHit.ImpactPoint;
+	}
+
+	if (APawn* ControlledPawn = GetPawn())
+	{
+		const FVector WorldDirection = (CachedDestination - ControlledPawn->GetActorLocation()).GetSafeNormal();
+		ControlledPawn->AddMovementInput(WorldDirection);
+	}
+}
+
+void AF1PlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
+{
+	if (!InputTag.MatchesTagExact(FF1GameplayTags::Get().InputTag_RMB))
+	{
+		if (GetASC()) GetASC()->AbilityInputTagReleased(InputTag);
+		return;
+	}
+
+	if (FollowTime <= ShortPressThreshold)
+	{
+		AActor* AssistTarget = GetTargetUnderCursorWithAssist();
+
+		if (AssistTarget)
+		{
+			// 적 타겟팅
+			Server_SetTargetEnemy(AssistTarget);
+			bAutoRunning = false;
+			Spline->ClearSplinePoints();
+		}
+		else
+		{
+			// 땅 클릭 이동
+			Server_SetTargetEnemy(nullptr);
+			if (APawn* ControlledPawn = GetPawn())
+			{
+				if (ThisActor) CachedDestination = ThisActor->GetActorLocation();
+				else CachedDestination = CursorHit.ImpactPoint;
+
+				StartMovementToDestination();
+			}
+		}
+	}
+	FollowTime = 0.f;
+}
+
+// ==============================================================================
+//  Helpers
+// ==============================================================================
+
+bool AF1PlayerController::IsEnemy(AActor* Target)
+{
+	if (!Target) return false;
+	IGenericTeamAgentInterface* MyAgent = Cast<IGenericTeamAgentInterface>(GetPawn());
+	IGenericTeamAgentInterface* TargetAgent = Cast<IGenericTeamAgentInterface>(Target);
+
+	if (MyAgent && TargetAgent)
+	{
+		return MyAgent->GetGenericTeamId() != TargetAgent->GetGenericTeamId();
+	}
+	return false;
+}
+
+AActor* AF1PlayerController::GetTargetUnderCursorWithAssist()
+{
+	FHitResult Hit;
+	GetHitResultUnderCursor(ECC_Visibility, false, Hit);
+	if (!Hit.bBlockingHit) return nullptr;
+
+	AActor* HitActor = Hit.GetActor();
+	if (HitActor && IsEnemy(HitActor)) return HitActor;
+
+	TArray<FOverlapResult> Overlaps;
+	FVector Center = Hit.ImpactPoint;
+	FCollisionShape Sphere = FCollisionShape::MakeSphere(TargetingAssistRadius);
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(GetPawn());
+
+	if (GetWorld()->OverlapMultiByChannel(Overlaps, Center, FQuat::Identity, ECC_Pawn, Sphere, Params))
+	{
+		AActor* ClosestEnemy = nullptr;
+		float MinDistSq = FLT_MAX;
+		for (const FOverlapResult& Overlap : Overlaps)
+		{
+			AActor* OverlapActor = Overlap.GetActor();
+			if (OverlapActor && IsEnemy(OverlapActor))
+			{
+				float DistSq = FVector::DistSquared(Center, OverlapActor->GetActorLocation());
+				if (DistSq < MinDistSq)
+				{
+					MinDistSq = DistSq;
+					ClosestEnemy = OverlapActor;
+				}
+			}
+		}
+		return ClosestEnemy;
+	}
+	return nullptr;
+}
+
+void AF1PlayerController::CursorTrace()
+{
+	GetHitResultUnderCursor(ECC_Visibility, false, CursorHit);
+	if (!CursorHit.bBlockingHit) return;
+
+	LastActor = ThisActor;
+	ThisActor = nullptr;
+
+	if (AActor* HitActor = CursorHit.GetActor())
+	{
+		if (AF1CharacterBase* HitCharacter = Cast<AF1CharacterBase>(HitActor))
+		{
+			ThisActor = HitCharacter;
+		}
+	}
+
+	if (LastActor != ThisActor)
+	{
+		if (LastActor)
+		{
+			if (IF1TeamOutlineInterface* OutlineInterface = Cast<IF1TeamOutlineInterface>(LastActor))
+			{
+				OutlineInterface->UnHighlightActor();
+			}
+		}
+		if (ThisActor)
+		{
+			if (IF1TeamOutlineInterface* OutlineInterface = Cast<IF1TeamOutlineInterface>(ThisActor))
+			{
+				OutlineInterface->HighlightActor();
+			}
+		}
+	}
+}
+
+UF1AbilitySystemComponent* AF1PlayerController::GetASC()
+{
+	if (F1AbilitySystemComponent == nullptr)
+	{
+		F1AbilitySystemComponent = Cast<UF1AbilitySystemComponent>(
+			UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetPawn<APawn>()));
+	}
+	return F1AbilitySystemComponent;
 }

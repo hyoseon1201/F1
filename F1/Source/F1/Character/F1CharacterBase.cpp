@@ -27,6 +27,8 @@ AF1CharacterBase::AF1CharacterBase()
 
     // 기본 팀 설정
     TeamID = FGenericTeamId(0);
+
+    GetMesh()->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
 }
 
 void AF1CharacterBase::BeginPlay()
