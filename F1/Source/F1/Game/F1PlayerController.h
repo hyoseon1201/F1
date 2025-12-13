@@ -51,6 +51,9 @@ private:
 	UPROPERTY(Replicated)
 	FVector CachedDestination = FVector::ZeroVector;
 
+	UPROPERTY(BlueprintReadOnly, Category = "Combat", meta = (AllowPrivateAccess = true))
+	TObjectPtr<AActor> TargetEnemy = nullptr;
+
 	float FollowTime = 0.f;
 	float ShortPressThreshold = 0.5f;
 
@@ -58,6 +61,7 @@ private:
 	bool bAutoRunning = false;
 
 	void AutoRun();
+	void TraceAndAttackTarget();
 
 	// ===========================================
 	// Cursor Trace

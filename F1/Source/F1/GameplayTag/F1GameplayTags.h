@@ -84,6 +84,9 @@ public:
     FGameplayTag Ability_Skill_SpawnDron;  // E
     FGameplayTag Ability_Skill_MeteorShower; // R
 
+    // 공격중 태그
+    FGameplayTag Ability_State_Attacking;
+
     // ===========================================
     // Cooldown Tags (추가 필수! Ability 태그와 1:1 대응)
     // ===========================================
@@ -93,6 +96,11 @@ public:
     FGameplayTag Cooldown_Skill_Haste;
     FGameplayTag Cooldown_Skill_SpawnDron;
     FGameplayTag Cooldown_Skill_MeteorShower;
+
+    // ===========================================
+    // Event Tags
+    // ===========================================
+    FGameplayTag Event_Combat_Attack;
 
     // ===========================================
     // Input Tags

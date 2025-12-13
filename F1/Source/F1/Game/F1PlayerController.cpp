@@ -14,6 +14,8 @@
 #include "Net/UnrealNetwork.h"
 #include "GameFramework/Character.h"
 #include "UI/Widget/DamageTextComponent.h"
+#include "Blueprint/AIBlueprintHelperLibrary.h"
+#include "GenericTeamAgentInterface.h"
 
 AF1PlayerController::AF1PlayerController()
 {
@@ -29,6 +31,8 @@ void AF1PlayerController::PlayerTick(float DeltaTime)
     {
         CursorTrace(); // Aura 방식: 매 틱마다 커서 트레이스
         AutoRun();
+
+        TraceAndAttackTarget();
     }
 }
 
@@ -128,6 +132,80 @@ void AF1PlayerController::AutoRun()
     }
 }
 
+void AF1PlayerController::TraceAndAttackTarget()
+{
+    // 타겟이 없으면 리턴
+    if (!TargetEnemy) return;
+
+    // 타겟이 죽었거나 사라졌으면 추적 중지
+    // (죽었는지 확인하는 로직은 Interface나 Tag로 추가 확인 권장)
+    if (!IsValid(TargetEnemy))
+    {
+        TargetEnemy = nullptr;
+        return;
+    }
+
+    APawn* ControlledPawn = GetPawn();
+    if (!ControlledPawn) return;
+
+    if (GetASC())
+    {
+        // "Ability.State.Attacking" 태그가 있으면(즉, 공격 모션 중이면) 리턴
+        // 혹은 쿨타임 태그가 있어도 리턴하게 하면 더 좋습니다.
+        FGameplayTag AttackingTag = FGameplayTag::RequestGameplayTag("Ability.State.Attacking");
+        FGameplayTag CooldownTag = FGameplayTag::RequestGameplayTag("Cooldown.Attack"); // 본인 쿨타임 태그
+
+        if (GetASC()->HasMatchingGameplayTag(AttackingTag) ||
+            GetASC()->HasMatchingGameplayTag(CooldownTag))
+        {
+            return; // "아직 공격 안 끝났거나 쿨타임이다. 진정해라."
+        }
+    }
+
+    // 1. 거리 계산
+    float Distance = ControlledPawn->GetDistanceTo(TargetEnemy);
+
+    // 공격 사거리 (나중에는 스탯에서 가져와야 함. 예: 600.f)
+    // 약간의 여유(-50)를 둬서 사거리 끝자락에서 버벅이지 않게 함
+    float AttackRange = 600.0f;
+
+    if (Distance <= AttackRange - 50.0f)
+    {
+        // A. 사거리 안: 멈추고 공격!
+        StopMovement(); // 이동 멈춤
+
+        // 회전: 적을 바라보게 함
+        FVector LookAt = TargetEnemy->GetActorLocation() - ControlledPawn->GetActorLocation();
+        LookAt.Z = 0.f;
+        ControlledPawn->SetActorRotation(LookAt.Rotation());
+
+        // B. GAS 어빌리티 발동
+        if (GetASC())
+        {
+            // Payload에 타겟 정보를 실어서 보냄
+            FGameplayEventData Payload;
+            Payload.Instigator = ControlledPawn;
+            Payload.Target = TargetEnemy;
+
+            // 태그로 어빌리티 발동 시도 (GA_Attack에 Trigger Tag로 Ability.Attack 설정 필요)
+            // TryActivateAbilitiesByTag는 Payload를 못 보내므로, SendGameplayEventToActor 사용 권장
+
+            // 방법 1: Event로 발동 (추천) -> GA_Attack의 Trigger를 'GameplayEvent'로 설정
+            UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
+                ControlledPawn,
+                FF1GameplayTags::Get().Event_Combat_Attack,
+                Payload
+            );
+        }
+    }
+    else
+    {
+        // C. 사거리 밖: 추적 이동
+        // Spline 이동이 아니라 AI Navigation 이동을 사용해야 움직이는 적을 잘 쫓아감
+        UAIBlueprintHelperLibrary::SimpleMoveToActor(this, TargetEnemy);
+    }
+}
+
 void AF1PlayerController::CursorTrace()
 {
     GetHitResultUnderCursor(ECC_Visibility, false, CursorHit);
@@ -186,6 +264,7 @@ void AF1PlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
 
     // RMB Pressed: 자동 이동 중지
     bAutoRunning = false;
+    TargetEnemy = nullptr;
 }
 
 void AF1PlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
@@ -196,6 +275,8 @@ void AF1PlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
         if (GetASC()) GetASC()->AbilityInputTagHeld(InputTag);
         return;
     }
+
+    TargetEnemy = nullptr;
 
     if (GetASC())
     {
@@ -232,20 +313,66 @@ void AF1PlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
     // 짧은 클릭인 경우에만 이동 명령 실행
     if (FollowTime <= ShortPressThreshold)
     {
-        const APawn* ControlledPawn = GetPawn();
-        if (ControlledPawn)
+        bool bTargetIsEnemy = false;
+        // 1. 커서 아래에 캐릭터가 있을 때만 판별
+        if (ThisActor)
         {
-            // 커서 아래에 액터가 있으면 그 위치로, 없으면 땅 위치로 이동
-            if (ThisActor)
+            // A. 나(플레이어)와 타겟(적)을 인터페이스로 캐스팅
+            // CharacterBase가 이미 IGenericTeamAgentInterface를 상속받았다고 가정합니다.
+            IGenericTeamAgentInterface* MyTeamAgent = Cast<IGenericTeamAgentInterface>(GetPawn());
+            IGenericTeamAgentInterface* TargetTeamAgent = Cast<IGenericTeamAgentInterface>(ThisActor);
+
+            // B. 둘 다 팀 정보가 있을 때만 비교
+            if (MyTeamAgent && TargetTeamAgent)
             {
-                CachedDestination = ThisActor->GetActorLocation();
+                // FGenericTeamId는 ==, != 연산자가 오버로딩 되어 있어서 바로 비교 가능합니다.
+                // GetGenericTeamId()는 FGenericTeamId 타입을 반환합니다.
+                FGenericTeamId MyTeamID = MyTeamAgent->GetGenericTeamId();
+                FGenericTeamId TargetTeamID = TargetTeamAgent->GetGenericTeamId();
+
+                // [핵심] 팀이 다르고, 타겟이 '중립(NoTeam)'이 아니라면 적으로 간주
+                if (MyTeamID != TargetTeamID && TargetTeamID != FGenericTeamId::NoTeam)
+                {
+                    bTargetIsEnemy = true;
+                }
             }
+            // 만약 Pawn에 없고 PlayerState에만 있다면? (혹시 위 캐스팅이 실패할 경우 대비)
             else
             {
-                CachedDestination = CursorHit.ImpactPoint;
+                // 안전장치: Pawn이 아니라 PlayerState에서 찾아야 하는 경우
+                // 보통 CharacterBase에서 GetGenericTeamId를 오버라이드해서 
+                // "내 PlayerState의 ID를 리턴해라"라고 짜두는 게 정석입니다.
+                // 작성하신 CharacterBase에 그렇게 되어 있다면 위의 A 로직으로 충분합니다.
             }
+        }
 
-            StartMovementToDestination();
+        if (bTargetIsEnemy)
+        {
+            // [추적 모드 ON] -> 적입니다!
+            TargetEnemy = ThisActor;
+            bAutoRunning = false;
+            Spline->ClearSplinePoints();
+        }
+        else
+        {
+            // [일반 이동] -> 땅이거나 아군입니다.
+            TargetEnemy = nullptr;
+
+            const APawn* ControlledPawn = GetPawn();
+            if (ControlledPawn)
+            {
+                // 커서 아래에 액터가 있으면 그 위치로, 없으면 땅 위치로 이동
+                if (ThisActor)
+                {
+                    CachedDestination = ThisActor->GetActorLocation();
+                }
+                else
+                {
+                    CachedDestination = CursorHit.ImpactPoint;
+                }
+
+                StartMovementToDestination();
+            }
         }
     }
 

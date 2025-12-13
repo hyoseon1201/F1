@@ -203,6 +203,11 @@ void FF1GameplayTags::InitializeNativeGameplayTags()
         FString("Dekker R Ultimate Skill MeteorShower")
     );
 
+    GameplayTags.Ability_State_Attacking = Manager.AddNativeGameplayTag(
+        FName("Ability.State.Attacking"),
+        FString("Attacking State")
+    );
+
     // ===========================================
     // Cooldown Tags (추가 필수! Ability 태그와 1:1 대응)
     // ===========================================
@@ -231,6 +236,14 @@ void FF1GameplayTags::InitializeNativeGameplayTags()
     GameplayTags.Cooldown_Skill_MeteorShower = Manager.AddNativeGameplayTag(
         FName("Cooldown.Skill.MeteorShower"),
         FString("Cooldown for Dekker R Skill MeteorShower")
+    );
+
+    // ===========================================
+    // Event Tags
+    // ===========================================
+    GameplayTags.Event_Combat_Attack = UGameplayTagsManager::Get().AddNativeGameplayTag(
+        FName("Event.Combat.Attack"),
+        FString("Base Attack Event Trigger")
     );
 
     // ===========================================
