@@ -54,7 +54,6 @@ protected:
 
 	virtual void UpdateCombatSocketsFromCharacterInfo() override;
 
-private:
 	virtual void InitAbilityActorInfo() override;
 
 	// ===========================================

@@ -77,6 +77,7 @@ public:
     virtual void Die() override;
     virtual void SetCombatTarget(AActor* InTarget) override;
     virtual void Attack() override;
+    virtual float GetAttackRange() override;
 
     UFUNCTION(NetMulticast, Reliable)
     virtual void MulticastHandleDeath();
@@ -126,6 +127,9 @@ protected:
 
     UPROPERTY()
     TObjectPtr<UAttributeSet> AttributeSet;
+
+    UPROPERTY()
+    TObjectPtr<class UF1AttributeSet> F1AttributeSet;
 
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Attributes")
     TSubclassOf<UGameplayEffect> DefaultAttributes;

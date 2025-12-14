@@ -45,6 +45,10 @@ void AF1CharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 
 void AF1CharacterBase::InitAbilityActorInfo()
 {
+    if (AttributeSet)
+    {
+        F1AttributeSet = Cast<UF1AttributeSet>(AttributeSet);
+    }
 }
 
 void AF1CharacterBase::HighlightActor()
@@ -105,32 +109,31 @@ bool AF1CharacterBase::IsEnemyToPlayer() const
 
 int32 AF1CharacterBase::GetCurrentLevel() const
 {
+    // 1. 플레이어라면 PlayerState에서 가져옴 (가장 우선순위)
+    // (참고: 나중에 F1PlayerState도 캐싱해두면 여기서 Cast 비용도 줄일 수 있습니다)
     if (AF1PlayerState* F1PS = GetPlayerState<AF1PlayerState>())
     {
         return F1PS->GetPlayerLevel();
     }
 
-    if (UAbilitySystemComponent* ASC = GetAbilitySystemComponent())
+    // 2. [최적화] 미니언/몬스터라면 캐싱된 AttributeSet에서 바로 가져옴
+    if (F1AttributeSet)
     {
-        if (const UAttributeSet* AS = ASC->GetAttributeSet(UF1AttributeSet::StaticClass()))
-        {
-            const UF1AttributeSet* F1AS = Cast<UF1AttributeSet>(AS);
-            return F1AS ? FMath::FloorToInt(F1AS->GetCharacterLevel()) : 1;
-        }
+        // float -> int 변환
+        return static_cast<int32>(F1AttributeSet->GetCharacterLevel());
     }
+
+    // 3. 둘 다 없으면 기본 레벨 1
     return 1;
 }
 
 float AF1CharacterBase::GetCurrentExperience() const
 {
-    if (UAbilitySystemComponent* ASC = GetAbilitySystemComponent())
+    if (F1AttributeSet)
     {
-        if (const UAttributeSet* AS = ASC->GetAttributeSet(UF1AttributeSet::StaticClass()))
-        {
-            const UF1AttributeSet* F1AS = Cast<UF1AttributeSet>(AS);
-            return F1AS ? F1AS->GetExperience() : 0.0f;
-        }
+        F1AttributeSet->GetExperience();
     }
+
     return 0.0f;
 }
 
@@ -230,6 +233,16 @@ void AF1CharacterBase::Attack()
 {
 }
 
+float AF1CharacterBase::GetAttackRange()
+{
+    if (F1AttributeSet)
+    {
+        return F1AttributeSet->GetAttackRange();
+    }
+
+    return 150.f;
+}
+
 void AF1CharacterBase::MulticastHandleDeath_Implementation()
 {
     if (UAbilitySystemComponent* ASC = GetAbilitySystemComponent())
@@ -267,16 +280,17 @@ UAbilitySystemComponent* AF1CharacterBase::GetAbilitySystemComponent() const
 
 void AF1CharacterBase::BindMovementSpeedDelegate()
 {
-    if (!AbilitySystemComponent || !AttributeSet || !GetCharacterMovement()) return;
+    // 안전장치
+    if (!AbilitySystemComponent || !F1AttributeSet || !GetCharacterMovement()) return;
 
-    const UF1AttributeSet* F1AS = CastChecked<UF1AttributeSet>(AttributeSet);
-
-    // 델리게이트 등록 및 초기값 동기화 처리
-    AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AS->GetMovementSpeedAttribute()).AddLambda(
-        [this, F1AS](const FOnAttributeChangeData& Data)
+    // 1. 델리게이트 등록
+    AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(F1AttributeSet->GetMovementSpeedAttribute()).AddLambda(
+        [this](const FOnAttributeChangeData& Data)
         {
-            // 델리게이트가 호출될 때마다 MaxWalkSpeed를 업데이트
-            GetCharacterMovement()->MaxWalkSpeed = Data.NewValue;
+            if (UCharacterMovementComponent* CMC = GetCharacterMovement())
+            {
+                CMC->MaxWalkSpeed = Data.NewValue;
+            }
         }
     );
 }

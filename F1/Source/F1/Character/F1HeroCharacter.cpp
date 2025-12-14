@@ -374,6 +374,8 @@ void AF1HeroCharacter::UpdateCombatSocketsFromCharacterInfo()
 
 void AF1HeroCharacter::InitAbilityActorInfo()
 {
+    Super::InitAbilityActorInfo();
+
     AF1PlayerState* F1PS = GetPlayerState<AF1PlayerState>();
     if (!F1PS) return;
 

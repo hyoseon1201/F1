@@ -79,8 +79,9 @@ void UF1ProjectileSpell::SpawnProjectile(const FVector& ProjectileTargetLocation
 		const FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(DamageEffectClass, GetAbilityLevel(), EffectContextHandle);
 		const float ScaledDamage = Damage.GetValueAtLevel(GetAbilityLevel());
 
-		// 태그: DamageType.Physical 등 프로젝트에 맞는 태그 사용
-		UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, FF1GameplayTags::Get().DamageType_Physical, ScaledDamage);
+		// 태그: DamageType.Physical 등 프로젝트에 맞는 태그 사용 
+		// TODO: 캐릭터마다 맞는 속성으로 나가게 수정해줘야함
+		UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, DamageType, ScaledDamage);
 
 		Projectile->DamageEffectSpecHandle = SpecHandle;
 
@@ -153,8 +154,8 @@ void UF1ProjectileSpell::SpawnHomingProjectile(AActor* HomingTarget)
 		const FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(DamageEffectClass, GetAbilityLevel(), EffectContextHandle);
 		const float ScaledDamage = Damage.GetValueAtLevel(GetAbilityLevel());
 
-		// 태그 주의 (프로젝트에 맞게 수정)
-		UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, FF1GameplayTags::Get().DamageType_Physical, ScaledDamage);
+		// TODO: 태그 주의 (프로젝트에 맞게 수정)
+		UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, DamageType, ScaledDamage);
 
 		Projectile->DamageEffectSpecHandle = SpecHandle;
 
@@ -280,7 +281,8 @@ void UF1ProjectileSpell::SpawnArcProjectile(const FVector& TargetLocation, float
 		const FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(DamageEffectClass, GetAbilityLevel(), EffectContextHandle);
 		const float ScaledDamage = Damage.GetValueAtLevel(GetAbilityLevel());
 
-		UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, FF1GameplayTags::Get().DamageType_Physical, ScaledDamage);
+		// TODO: 태그 수정
+		UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, DamageType, ScaledDamage);
 
 		Projectile->DamageEffectSpecHandle = SpecHandle;
 
