@@ -203,6 +203,26 @@ void FF1GameplayTags::InitializeNativeGameplayTags()
         FString("Dekker R Ultimate Skill MeteorShower")
     );
 
+    GameplayTags.Ability_Skill_FistBarrage = Manager.AddNativeGameplayTag(
+        FName("Ability.Skill.FistBarrage"),
+        FString("Crunch Q Skill FistBarrage (Forward Multi-Hit)")
+    );
+
+    GameplayTags.Ability_Skill_Uppercut = Manager.AddNativeGameplayTag(
+        FName("Ability.Skill.Uppercut"),
+        FString("Crunch W Skill Uppercut (CC Stun)")
+    );
+
+    GameplayTags.Ability_Skill_RocketDash = Manager.AddNativeGameplayTag(
+        FName("Ability.Skill.RocketDash"),
+        FString("Crunch E Skill RocketDash (Dash & Knockback)")
+    );
+
+    GameplayTags.Ability_Skill_Overdrive = Manager.AddNativeGameplayTag(
+        FName("Ability.Skill.Overdrive"),
+        FString("Crunch R Ultimate Skill Overdrive (Buff & Awaken)")
+    );
+
     GameplayTags.Ability_State_Attacking = Manager.AddNativeGameplayTag(
         FName("Ability.State.Attacking"),
         FString("Attacking State")
@@ -236,6 +256,26 @@ void FF1GameplayTags::InitializeNativeGameplayTags()
     GameplayTags.Cooldown_Skill_MeteorShower = Manager.AddNativeGameplayTag(
         FName("Cooldown.Skill.MeteorShower"),
         FString("Cooldown for Dekker R Skill MeteorShower")
+    );
+
+    GameplayTags.Cooldown_Skill_FistBarrage = Manager.AddNativeGameplayTag(
+        FName("Cooldown.Skill.FistBarrage"),
+        FString("Cooldown Tag for FistBarrage")
+    );
+
+    GameplayTags.Cooldown_Skill_Uppercut = Manager.AddNativeGameplayTag(
+        FName("Cooldown.Skill.Uppercut"),
+        FString("Cooldown Tag for Uppercut")
+    );
+
+    GameplayTags.Cooldown_Skill_RocketDash = Manager.AddNativeGameplayTag(
+        FName("Cooldown.Skill.RocketDash"),
+        FString("Cooldown Tag for RocketDash")
+    );
+
+    GameplayTags.Cooldown_Skill_Overdrive = Manager.AddNativeGameplayTag(
+        FName("Cooldown.Skill.Overdrive"),
+        FString("Cooldown Tag for Overdrive")
     );
 
     // ===========================================

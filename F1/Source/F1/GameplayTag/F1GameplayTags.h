@@ -78,11 +78,17 @@ public:
     FGameplayTag Ability_Attack_Melee; // 근접 평타
     FGameplayTag Ability_Attack_Ranged; // 원거리 평타
 
-    // [마법사 캐릭터 (예: Gideon)]
+    // [Dekker Skill]
     FGameplayTag Ability_Skill_ArcBolt;    // Q
     FGameplayTag Ability_Skill_Haste;   // W
     FGameplayTag Ability_Skill_SpawnDron;  // E
     FGameplayTag Ability_Skill_MeteorShower; // R
+
+    // [Crunch Skill]
+    FGameplayTag Ability_Skill_FistBarrage;  
+    FGameplayTag Ability_Skill_Uppercut;     
+    FGameplayTag Ability_Skill_RocketDash;   
+    FGameplayTag Ability_Skill_Overdrive;
 
     // 공격중 태그
     FGameplayTag Ability_State_Attacking;
@@ -96,6 +102,11 @@ public:
     FGameplayTag Cooldown_Skill_Haste;
     FGameplayTag Cooldown_Skill_SpawnDron;
     FGameplayTag Cooldown_Skill_MeteorShower;
+
+    FGameplayTag Cooldown_Skill_FistBarrage;
+    FGameplayTag Cooldown_Skill_Uppercut;
+    FGameplayTag Cooldown_Skill_RocketDash;
+    FGameplayTag Cooldown_Skill_Overdrive;
 
     // ===========================================
     // Event Tags

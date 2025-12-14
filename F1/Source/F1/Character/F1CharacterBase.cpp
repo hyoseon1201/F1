@@ -71,23 +71,36 @@ void AF1CharacterBase::UnHighlightActor()
 
 bool AF1CharacterBase::IsEnemyToPlayer() const
 {
-    if (const UWorld* World = GetWorld())
+    // 1. 월드나 PC가 없으면 적대적으로 간주 (안전장치)
+    const UWorld* World = GetWorld();
+    if (!World) return true;
+
+    // 2. 로컬 플레이어 컨트롤러 가져오기
+    // (GetFirstPlayerController는 클라이언트 입장에서 '나'를 의미하므로 UI용으로 적합)
+    const APlayerController* PC = World->GetFirstPlayerController();
+    if (!PC) return true;
+
+    // 3. 플레이어 폰(캐릭터) 가져오기
+    APawn* PlayerPawn = PC->GetPawn();
+    if (!PlayerPawn) return true;
+
+    // ==========================================================
+    // ⭐ [변경] CombatInterface를 통해 팀 ID 비교 ⭐
+    // ==========================================================
+
+    // 플레이어(상대방)가 전투 인터페이스를 가지고 있는지 확인
+    const IF1CombatInterface* PlayerCombat = Cast<IF1CombatInterface>(PlayerPawn);
+
+    // 나 자신(this)은 이미 인터페이스를 상속받았으므로 바로 호출 가능
+    // (AF1CharacterBase가 IF1CombatInterface를 상속받았다는 가정)
+
+    if (PlayerCombat)
     {
-        if (APlayerController* PC = World->GetFirstPlayerController())
-        {
-            if (APawn* PlayerPawn = PC->GetPawn())
-            {
-                if (const IGenericTeamAgentInterface* PlayerTeamAgent = Cast<IGenericTeamAgentInterface>(PlayerPawn))
-                {
-                    FGenericTeamId PlayerTeam = PlayerTeamAgent->GetGenericTeamId();
-                    FGenericTeamId MyTeam = GetGenericTeamId();
-                    return PlayerTeam != MyTeam;
-                }
-            }
-        }
+        // 내 팀 ID와 플레이어의 팀 ID가 다르면 적(Enemy)
+        return GetTeamID() != PlayerCombat->GetTeamID();
     }
 
-    return true;
+    return true; // 인터페이스가 없으면 기본적으로 적 취급
 }
 
 int32 AF1CharacterBase::GetCurrentLevel() const
@@ -119,6 +132,11 @@ float AF1CharacterBase::GetCurrentExperience() const
         }
     }
     return 0.0f;
+}
+
+int32 AF1CharacterBase::GetTeamID() const
+{
+    return GetGenericTeamId();
 }
 
 void AF1CharacterBase::AddToLevel(int32 InLevelToAdd)

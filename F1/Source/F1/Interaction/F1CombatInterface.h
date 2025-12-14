@@ -25,6 +25,8 @@ public:
 	virtual int32 GetCurrentLevel() const = 0;
 	virtual float GetCurrentExperience() const = 0;
 
+	virtual int32 GetTeamID() const = 0;
+
 	virtual void AddToLevel(int32 InLevelToAdd) = 0;
 	virtual void LevelUp() = 0;
 

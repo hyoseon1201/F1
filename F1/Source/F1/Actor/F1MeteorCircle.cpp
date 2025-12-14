@@ -5,6 +5,7 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
 #include "GameplayTag/F1GameplayTags.h"
+#include <Character/F1CharacterBase.h>
 
 AF1MeteorCircle::AF1MeteorCircle()
 {
@@ -52,14 +53,33 @@ void AF1MeteorCircle::BeginPlay()
 
 void AF1MeteorCircle::ApplyPeriodicDamage()
 {
+	// 0. 시전자(Caster) 정보 가져오기 (주인이 없으면 데미지 판정 불가)
+	AActor* Caster = GetInstigator();
+	if (!Caster) return;
+
+	// 시전자의 인터페이스 가져오기 (팀 확인용)
+	IF1CombatInterface* CasterCombat = Cast<IF1CombatInterface>(Caster);
+
 	// 1. 범위 안에 있는 액터들 찾기
 	TSet<AActor*> OverlappingActors;
 	SphereComp->GetOverlappingActors(OverlappingActors);
 
 	for (AActor* TargetActor : OverlappingActors)
 	{
-		// 2. 적군 판별 (태그나 인터페이스 활용)
-		// if (IsAlly(TargetActor)) continue; 
+		// 유효성 검사 및 자해 방지 (혹시 모를 안전장치)
+		if (!TargetActor || TargetActor == Caster) continue;
+
+		// 2. [팀 구분 핵심 로직] 
+		IF1CombatInterface* TargetCombat = Cast<IF1CombatInterface>(TargetActor);
+
+		// 둘 다 인터페이스가 있고, 팀이 같다면? -> 아군이므로 패스(continue)
+		if (CasterCombat && TargetCombat)
+		{
+			if (CasterCombat->GetTeamID() == TargetCombat->GetTeamID())
+			{
+				continue; // 데미지 주지 않고 다음 타겟으로 넘어감
+			}
+		}
 
 		// 3. 데미지 적용
 		UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor);

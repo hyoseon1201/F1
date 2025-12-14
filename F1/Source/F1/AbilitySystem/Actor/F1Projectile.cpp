@@ -12,6 +12,7 @@
 #include "GenericTeamAgentInterface.h"
 #include "AbilitySystem/F1AttributeSet.h"
 #include "Engine/OverlapResult.h" // 필수
+#include <Character/F1CharacterBase.h>
 
 AF1Projectile::AF1Projectile()
 {
@@ -75,14 +76,14 @@ void AF1Projectile::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AA
 
 	if (bHit) return;
 
-	IGenericTeamAgentInterface* SourceTeamAgent = Cast<IGenericTeamAgentInterface>(ProjectileOwner);
-	IGenericTeamAgentInterface* TargetTeamAgent = Cast<IGenericTeamAgentInterface>(OtherActor);
+	IF1CombatInterface* SourceCombat = Cast<IF1CombatInterface>(ProjectileOwner);
+	IF1CombatInterface* TargetCombat = Cast<IF1CombatInterface>(OtherActor);
 
-	if (SourceTeamAgent && TargetTeamAgent)
+	if (SourceCombat && TargetCombat)
 	{
-		if (SourceTeamAgent->GetGenericTeamId() == TargetTeamAgent->GetGenericTeamId())
+		if (SourceCombat->GetTeamID() == TargetCombat->GetTeamID())
 		{
-			return;
+			return; // 팀킬 방지
 		}
 	}
 
@@ -145,14 +146,14 @@ void AF1Projectile::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor,
 			if (AActor* TargetActor = Result.GetActor())
 			{
 				AActor* ProjectileOwner = GetOwner();
-				IGenericTeamAgentInterface* SourceTeamAgent = Cast<IGenericTeamAgentInterface>(ProjectileOwner);
-				IGenericTeamAgentInterface* TargetTeamAgent = Cast<IGenericTeamAgentInterface>(TargetActor);
+				IF1CombatInterface* SourceCombat = Cast<IF1CombatInterface>(ProjectileOwner);
+				IF1CombatInterface* TargetCombat = Cast<IF1CombatInterface>(OtherActor);
 
-				if (SourceTeamAgent && TargetTeamAgent)
+				if (SourceCombat && TargetCombat)
 				{
-					if (SourceTeamAgent->GetGenericTeamId() == TargetTeamAgent->GetGenericTeamId())
+					if (SourceCombat->GetTeamID() == TargetCombat->GetTeamID())
 					{
-						continue; // 아군은 패스
+						return; // 팀킬 방지
 					}
 				}
 
