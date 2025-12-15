@@ -245,10 +245,10 @@ void AF1PlayerController::TraceAndAttackTarget()
 	if (!ControlledPawn) return;
 
 	// (옵션) 클라이언트 오토런 해제 조건
-	if (bAutoRunning && ControlledPawn->GetVelocity().SizeSquared() < 10.0f)
-	{
-		bAutoRunning = false;
-	}
+	//if (bAutoRunning && ControlledPawn->GetVelocity().SizeSquared() < 10.0f)
+	//{
+	//	bAutoRunning = false;
+	//}
 
 	float Distance = ControlledPawn->GetDistanceTo(TargetEnemy);
 	float AttackRange = 600.0f; // 나중에 스탯 적용
@@ -258,24 +258,40 @@ void AF1PlayerController::TraceAndAttackTarget()
 	// ====================================================
 	if (Distance <= AttackRange - 50.0f)
 	{
-		// 쿨타임 체크 (스팸 방지)
-		double CurrentTime = GetWorld()->GetTimeSeconds();
-		if (CurrentTime - LastAttackTime < 0.5f) return;
+		// [수정] 쿨타임 체크를 가장 먼저 해야 합니다!
+		// GAS 컴포넌트에게 "공격 쿨타임 태그"가 붙어있는지 물어봅니다.
+		if (UF1AbilitySystemComponent* MyASC = GetASC())
+		{
+			// 예: F1GameplayTags::Get().Cooldown_Combat_Attack
+			// (님 프로젝트에 맞는 쿨타임 태그를 넣으세요)
+			FGameplayTag CooldownTag = FF1GameplayTags::Get().Cooldown_Attack;
 
-		// [이동 정지]
+			if (MyASC->HasMatchingGameplayTag(CooldownTag))
+			{
+				// 쿨타임 중이다? -> 아무것도 하지 말고 리턴!
+				// 이렇게 하면 아래의 StopMovement, Rotation 로직이 실행되지 않고
+				// Tick의 뒷부분에 있는 AutoRun()이 계속 실행되어 무빙이 끊기지 않습니다.
+				return;
+			}
+		}
+
+		// --------------------------------------------------------
+		// 여기서부터는 "공격 가능 상태"일 때만 실행됨
+		// --------------------------------------------------------
+
+		// 2. [이동 정지]
 		if (HasAuthority())
 		{
-			Client_MoveToPoints(TArray<FVector>()); // 서버 -> 클라 정지 명령
+			Client_MoveToPoints(TArray<FVector>());
 		}
 		else
 		{
-			// 클라이언트 예측 정지
 			bAutoRunning = false;
 			Spline->ClearSplinePoints();
 			StopMovement();
 		}
 
-		// [회전]
+		// 3. [회전]
 		FVector LookAt = TargetEnemy->GetActorLocation() - ControlledPawn->GetActorLocation();
 		LookAt.Z = 0.f;
 		ControlledPawn->SetActorRotation(LookAt.Rotation());
@@ -283,12 +299,16 @@ void AF1PlayerController::TraceAndAttackTarget()
 		if (HasAuthority()) Client_FaceTarget(TargetEnemy);
 		else FaceTargetActor = TargetEnemy;
 
-		// ? [핵심] GAS 이벤트 발송 (양쪽 다 실행!) ?
-		// 클라이언트: 즉시 몽타주 재생 (Prediction)
-		// 서버: 실제 데미지/쿨타임 처리
+		// 4. [공격 명령]
 		if (GetASC())
 		{
+			// (기존 LastAttackTime 체크는 GAS 쿨타임이 있으면 사실상 필요 없지만, 
+			//  이중 안전장치로 두셔도 됩니다.)
+			double CurrentTime = GetWorld()->GetTimeSeconds();
+			if (CurrentTime - LastAttackTime < 0.1f) return; // 아주 짧게만
+
 			LastAttackTime = CurrentTime;
+
 			FGameplayEventData Payload;
 			Payload.Instigator = ControlledPawn;
 			Payload.Target = TargetEnemy;

@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "AbilitySystem/Actor/F1Projectile.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
@@ -11,18 +9,17 @@
 #include "AbilitySystemComponent.h"
 #include "GenericTeamAgentInterface.h"
 #include "AbilitySystem/F1AttributeSet.h"
-#include "Engine/OverlapResult.h" // 필수
-#include <Character/F1CharacterBase.h>
+#include "Engine/OverlapResult.h"
+#include "Character/F1CharacterBase.h"
 
 AF1Projectile::AF1Projectile()
 {
 	PrimaryActorTick.bCanEverTick = false;
 	bReplicates = true;
+	SetReplicateMovement(true);
 
 	Sphere = CreateDefaultSubobject<USphereComponent>("Sphere");
 	SetRootComponent(Sphere);
-
-	// 충돌 프로필 설정 (BP에서 Custom 설정을 따르도록 함)
 	Sphere->SetCollisionProfileName(FName("Projectile"));
 
 	ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>("ProjectileMovement");
@@ -44,7 +41,6 @@ void AF1Projectile::SetHomingTarget(AActor* TargetActor)
 void AF1Projectile::BeginPlay()
 {
 	Super::BeginPlay();
-
 	SetLifeSpan(LifeSpan);
 
 	if (Sphere)
@@ -56,7 +52,6 @@ void AF1Projectile::BeginPlay()
 
 void AF1Projectile::Destroyed()
 {
-	// 직사(Overlap)로 터졌을 때 클라이언트 이펙트 처리 (기존 유지)
 	if (!bHit && !HasAuthority())
 	{
 		if (ImpactEffect)
@@ -67,23 +62,43 @@ void AF1Projectile::Destroyed()
 	Super::Destroyed();
 }
 
+// ============================================================================
+// [DEBUG] OnSphereOverlap (직격)
+// ============================================================================
 void AF1Projectile::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	// 직사 공격 로직 (기존 코드 유지)
-	AActor* ProjectileOwner = GetOwner();
-	if (!ProjectileOwner) return;
-	if (OtherActor == ProjectileOwner) return;
+	if (!HasAuthority()) return; // 서버만 처리
 
+	AActor* ProjectileOwner = GetOwner();
+	if (!ProjectileOwner)
+	{
+		// [DEBUG 1] 주인이 없는 경우 (RPC 과정에서 SetOwner 누락 가능성)
+		UE_LOG(LogTemp, Error, TEXT("[Projectile] FAILED: Projectile has no Owner! OtherActor: %s"), *GetNameSafe(OtherActor));
+		Destroy();
+		return;
+	}
+
+	if (OtherActor == ProjectileOwner) return;
 	if (bHit) return;
+
+	// [DEBUG 2] 충돌 감지 성공
+	UE_LOG(LogTemp, Log, TEXT("[Projectile] Overlap Detected with: %s"), *GetNameSafe(OtherActor));
 
 	IF1CombatInterface* SourceCombat = Cast<IF1CombatInterface>(ProjectileOwner);
 	IF1CombatInterface* TargetCombat = Cast<IF1CombatInterface>(OtherActor);
 
 	if (SourceCombat && TargetCombat)
 	{
-		if (SourceCombat->GetTeamID() == TargetCombat->GetTeamID())
+		int32 MyTeam = SourceCombat->GetTeamID();
+		int32 EnemyTeam = TargetCombat->GetTeamID();
+
+		// [DEBUG] 여기서 로그가 찍히는지 보세요!
+		UE_LOG(LogTemp, Warning, TEXT("[Projectile] Hit Check: MyTeam(%d) vs EnemyTeam(%d)"), MyTeam, EnemyTeam);
+
+		if (MyTeam == EnemyTeam)
 		{
-			return; // 팀킬 방지
+			UE_LOG(LogTemp, Warning, TEXT("[Projectile] Friendly Fire! Ignored."));
+			return; // 같은 팀(0 vs 0)이면 여기서 막혀서 ExecCalc가 안 불립니다.
 		}
 	}
 
@@ -92,36 +107,43 @@ void AF1Projectile::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AA
 		UGameplayStatics::SpawnEmitterAtLocation(this, ImpactEffect, GetActorLocation());
 	}
 
-	if (HasAuthority())
+	if (UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OtherActor))
 	{
-		if (UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OtherActor))
+		if (DamageEffectSpecHandle.Data.IsValid())
 		{
-			if (DamageEffectSpecHandle.Data.IsValid())
-			{
-				TargetASC->ApplyGameplayEffectSpecToSelf(*DamageEffectSpecHandle.Data.Get());
-			}
+			// [DEBUG 4] 데미지 적용 시도
+			TargetASC->ApplyGameplayEffectSpecToSelf(*DamageEffectSpecHandle.Data.Get());
+			UE_LOG(LogTemp, Warning, TEXT("[Projectile] SUCCESS: ApplyGameplayEffect to %s"), *GetNameSafe(OtherActor));
 		}
-		Destroy();
+		else
+		{
+			// [DEBUG 5] SpecHandle이 비어있음 (가장 유력한 원인)
+			UE_LOG(LogTemp, Error, TEXT("[Projectile] FAILED: DamageEffectSpecHandle is INVALID! Check BP_ProjectileSpell Activate logic."));
+		}
 	}
 	else
 	{
-		bHit = true;
+		UE_LOG(LogTemp, Warning, TEXT("[Projectile] Target has no ASC."));
 	}
+
+	Destroy();
 }
 
+// ============================================================================
+// [DEBUG] OnHit (폭발/지형 충돌)
+// ============================================================================
 void AF1Projectile::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
-	// [중요] Hit 이벤트는 서버에서만 처리하고 결과를 전파합니다.
 	if (!HasAuthority()) return;
 
-	// 1. 이펙트 위치 및 스케일 계산 (서버가 결정)
+	// [DEBUG] OnHit 발생
+	UE_LOG(LogTemp, Log, TEXT("[Projectile] OnHit! Hitted Actor: %s"), *GetNameSafe(OtherActor));
+
 	FVector EffectLocation = GetActorLocation() + FVector(0.f, 0.f, 50.f);
 	FVector EffectScale = FVector(0.2f);
 
-	// 2. 모든 클라이언트에게 "이 위치, 이 크기로 터뜨려라" 명령
 	MulticastSpawnImpactEffect(EffectLocation, EffectScale);
 
-	// 3. 광역 데미지 처리
 	TArray<FOverlapResult> Overlaps;
 	FVector Origin = GetActorLocation();
 	float ExplosionRadius = 200.0f;
@@ -130,11 +152,14 @@ void AF1Projectile::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor,
 	Params.AddIgnoredActor(this);
 	if (GetOwner()) Params.AddIgnoredActor(GetOwner());
 
+	// 디버그 구체 그리기 (범위 확인용)
+	DrawDebugSphere(GetWorld(), Origin, ExplosionRadius, 12, FColor::Red, false, 2.0f);
+
 	bool bHitFound = GetWorld()->OverlapMultiByObjectType(
 		Overlaps,
 		Origin,
 		FQuat::Identity,
-		FCollisionObjectQueryParams(ECC_Pawn),
+		FCollisionObjectQueryParams(ECC_Pawn), // Pawn만 검색
 		FCollisionShape::MakeSphere(ExplosionRadius),
 		Params
 	);
@@ -147,13 +172,15 @@ void AF1Projectile::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor,
 			{
 				AActor* ProjectileOwner = GetOwner();
 				IF1CombatInterface* SourceCombat = Cast<IF1CombatInterface>(ProjectileOwner);
-				IF1CombatInterface* TargetCombat = Cast<IF1CombatInterface>(OtherActor);
+
+				// [수정] OtherActor(벽)가 아니라 TargetActor(적)를 검사해야 함!!
+				IF1CombatInterface* TargetCombat = Cast<IF1CombatInterface>(TargetActor);
 
 				if (SourceCombat && TargetCombat)
 				{
 					if (SourceCombat->GetTeamID() == TargetCombat->GetTeamID())
 					{
-						return; // 팀킬 방지
+						continue; // 팀킬 방지 (return 하면 다른 적도 못 때림 -> continue로 변경)
 					}
 				}
 
@@ -162,41 +189,26 @@ void AF1Projectile::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor,
 					if (DamageEffectSpecHandle.Data.IsValid())
 					{
 						TargetASC->ApplyGameplayEffectSpecToSelf(*DamageEffectSpecHandle.Data.Get());
+						UE_LOG(LogTemp, Warning, TEXT("[Projectile] Explosion Hit: %s"), *GetNameSafe(TargetActor));
 					}
 				}
 			}
 		}
 	}
 
-	// 4. 삭제 (네트워크 지연을 고려해 약간의 유예를 둠)
 	SetLifeSpan(3.0f);
-
 	if (Sphere) Sphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	SetActorHiddenInGame(true);
 }
 
 void AF1Projectile::MulticastSpawnImpactEffect_Implementation(FVector Location, FVector Scale)
 {
-	// [핵심 추가] 클라이언트에게 "나 이미 맞았어"라고 알려줌
-	// 이걸 해줘야 나중에 Destroyed()가 호출될 때 중복 재생을 안 함.
 	bHit = true;
-
-	// [추가 팁] 클라이언트에서도 즉시 숨겨버려서 반응성을 높임
-	// (서버에서 Hidden을 해도 리플리케이션 딜레이가 있을 수 있으므로)
 	SetActorHiddenInGame(true);
 	if (Sphere) Sphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
-	// [모든 클라이언트 실행] 서버가 준 위치와 크기로 이펙트 재생
 	if (ImpactEffect)
 	{
-		UGameplayStatics::SpawnEmitterAtLocation(
-			this,
-			ImpactEffect,
-			Location,
-			FRotator::ZeroRotator,
-			Scale
-		);
-
-		// (필요시 사운드 재생 코드 추가)
+		UGameplayStatics::SpawnEmitterAtLocation(this, ImpactEffect, Location, FRotator::ZeroRotator, Scale);
 	}
 }

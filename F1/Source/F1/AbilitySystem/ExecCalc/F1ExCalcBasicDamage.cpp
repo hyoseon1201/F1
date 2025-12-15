@@ -1,14 +1,13 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
-#include "AbilitySystem/ExecCalc/F1ExCalcBasicDamage.h" // 헤더 파일 변경
+#include "AbilitySystem/ExecCalc/F1ExCalcBasicDamage.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystem/F1AttributeSet.h"
 #include "GameplayTag/F1GameplayTags.h"
 #include "F1AbilityTypes.h"
 #include "AbilitySystem/F1AbilitySystemLibrary.h"
 
-// 정적 구조체 이름 변경 (F1PhysicalDamageStatics -> F1BasicDamageStatics)
+// 정적 구조체
 struct F1BasicDamageStatics
 {
 	DECLARE_ATTRIBUTE_CAPTUREDEF(Armor);
@@ -30,11 +29,9 @@ struct F1BasicDamageStatics
 static const F1BasicDamageStatics& BasicDamageStatics()
 {
 	static F1BasicDamageStatics BDStatics;
-
 	return BDStatics;
 }
 
-// 클래스 생성자 이름 변경
 UF1ExCalcBasicDamage::UF1ExCalcBasicDamage()
 {
 	RelevantAttributesToCapture.Add(BasicDamageStatics().ArmorDef);
@@ -44,7 +41,6 @@ UF1ExCalcBasicDamage::UF1ExCalcBasicDamage()
 	RelevantAttributesToCapture.Add(BasicDamageStatics().CriticalStrikeDamageDef);
 }
 
-// 실행 로직 이식
 void UF1ExCalcBasicDamage::Execute_Implementation(const FGameplayEffectCustomExecutionParameters& ExecutionParams, FGameplayEffectCustomExecutionOutput& OutExecutionOutput) const
 {
 	const UAbilitySystemComponent* SourceASC = ExecutionParams.GetSourceAbilitySystemComponent();
@@ -54,18 +50,36 @@ void UF1ExCalcBasicDamage::Execute_Implementation(const FGameplayEffectCustomExe
 	AActor* TargetAvatar = TargetASC ? TargetASC->GetAvatarActor() : nullptr;
 
 	const FGameplayEffectSpec& Spec = ExecutionParams.GetOwningSpec();
-
 	const FGameplayTagContainer* SourceTags = Spec.CapturedSourceTags.GetAggregatedTags();
 	const FGameplayTagContainer* TargetTags = Spec.CapturedTargetTags.GetAggregatedTags();
+
 	FAggregatorEvaluateParameters EvaluationParameters;
 	EvaluationParameters.SourceTags = SourceTags;
 	EvaluationParameters.TargetTags = TargetTags;
 
-	// 기본 물리 피해
-	// (물리 피해 태그를 사용하지만, 이제 이 ExecCalc는 "기본 공격 피해"를 담당한다고 가정합니다.)
-	float Damage = Spec.GetSetByCallerMagnitude(FF1GameplayTags::Get().DamageType_Physical);
+	// =========================================================================================
+	// [DEBUG] 1. 데미지 수신 확인 (가장 중요!)
+	// =========================================================================================
+	// 중요: 여기서 DamageType_Physical 태그로 값을 찾고 있습니다.
+	// 만약 Ability에서 보낸 태그가 'Magic'이나 다른 것이라면 여기서 0이 나옵니다.
+	float Damage = Spec.GetSetByCallerMagnitude(FF1GameplayTags::Get().DamageType_Physical, false, -1.0f);
 
-	// 속성 캡처
+	UE_LOG(LogTemp, Warning, TEXT("[ExecCalc] ========================================="));
+
+	if (Damage < 0.f)
+	{
+		// -1.0f가 나왔다면 태그를 못 찾았다는 뜻입니다. (0으로 보정)
+		UE_LOG(LogTemp, Error, TEXT("[ExecCalc] 1. FAILED: Could not find 'DamageType.Physical' tag in Spec! Input Damage: %f"), Damage);
+		Damage = 0.f;
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[ExecCalc] 1. Input Damage (Physical): %f"), Damage);
+	}
+
+	// =========================================================================================
+	// [DEBUG] 2. 스탯 캡처 확인
+	// =========================================================================================
 	float Armor = 0.f;
 	float ArmorPenFlat = 0.f;
 	float ArmorPenPercent = 0.f;
@@ -78,13 +92,25 @@ void UF1ExCalcBasicDamage::Execute_Implementation(const FGameplayEffectCustomExe
 	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(BasicDamageStatics().CriticalStrikeChanceDef, EvaluationParameters, CritChance);
 	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(BasicDamageStatics().CriticalStrikeDamageDef, EvaluationParameters, CritDamage);
 
+	UE_LOG(LogTemp, Log, TEXT("[ExecCalc] 2. Stats Captured -> Armor: %f | PenFlat: %f | PenPct: %f | CritChance: %f | CritDmgMultiplier: %f"),
+		Armor, ArmorPenFlat, ArmorPenPercent, CritChance, CritDamage);
+
+	// =========================================================================================
+	// [DEBUG] 3. 데미지 공식 계산 확인
+	// =========================================================================================
+
 	// 방어력 계산
 	float ArmorAfterPercent = Armor * (1.f - FMath::Clamp(ArmorPenPercent, 0.f, 1.f));
 	float EffectiveArmor = FMath::Max<float>(0.f, ArmorAfterPercent - ArmorPenFlat);
+
+	// 방어력으로 인한 감소율 (LoL 공식: 100 / (100 + 방어력))
 	float DamageMultiplier = 100.f / (100.f + EffectiveArmor);
 	float FinalDamage = Damage * DamageMultiplier;
 
-	// 치명타 판정 (유지)
+	UE_LOG(LogTemp, Log, TEXT("[ExecCalc] 3. Armor Calc -> EffectiveArmor: %f | Multiplier: %f | Damage After Armor: %f"),
+		EffectiveArmor, DamageMultiplier, FinalDamage);
+
+	// 치명타 판정
 	bool bIsCritical = FMath::FRand() < FMath::Clamp(CritChance, 0.f, 1.f);
 
 	FGameplayEffectContextHandle EffectContextHandle = Spec.GetContext();
@@ -92,12 +118,21 @@ void UF1ExCalcBasicDamage::Execute_Implementation(const FGameplayEffectCustomExe
 
 	if (bIsCritical)
 	{
-		FinalDamage *= (1.f + CritDamage);
+		FinalDamage *= (1.f + CritDamage); // 예: CritDamage가 0.5면 1.5배
+		UE_LOG(LogTemp, Warning, TEXT("[ExecCalc] 4. CRITICAL HIT! Damage Multiplied."));
 	}
 
 	FinalDamage = FMath::Max<float>(0.f, FinalDamage);
 
-	// 데미지 적용
-	const FGameplayModifierEvaluatedData EvaluatedData(UF1AttributeSet::GetIncomingDamageAttribute(), EGameplayModOp::Additive, FinalDamage);
-	OutExecutionOutput.AddOutputModifier(EvaluatedData);
+	// =========================================================================================
+	// [DEBUG] 4. 최종 결과 확인
+	// =========================================================================================
+	UE_LOG(LogTemp, Warning, TEXT("[ExecCalc] 5. FINAL OUTPUT DAMAGE: %f"), FinalDamage);
+	UE_LOG(LogTemp, Warning, TEXT("[ExecCalc] ========================================="));
+
+	if (FinalDamage > 0.f)
+	{
+		const FGameplayModifierEvaluatedData EvaluatedData(UF1AttributeSet::GetIncomingDamageAttribute(), EGameplayModOp::Additive, FinalDamage);
+		OutExecutionOutput.AddOutputModifier(EvaluatedData);
+	}
 }

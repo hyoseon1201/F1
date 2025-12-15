@@ -25,4 +25,7 @@ protected:
 	// 소환할 장판 액터 클래스 (BP에서 설정: BP_MeteorCircle)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Area")
 	TSubclassOf<AF1MeteorCircle> AreaActorClass;
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerSpawnAreaActor(const FVector& TargetLocation);
 };

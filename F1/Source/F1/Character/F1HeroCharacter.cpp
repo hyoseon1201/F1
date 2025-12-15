@@ -91,8 +91,10 @@ void AF1HeroCharacter::OnRep_PlayerState()
 {
     Super::OnRep_PlayerState();
 
+    // 1. GAS 연결 (모두에게 필수)
     InitAbilityActorInfo();
 
+    // 2. 내 캐릭터일 때만 필요한 설정 (이동속도 등)
     if (IsLocallyControlled())
     {
         BindMovementSpeedDelegate();
@@ -104,60 +106,44 @@ void AF1HeroCharacter::OnRep_PlayerState()
         SetGenericTeamId(F1PS->GetGenericTeamId());
     }
 
+    InitUI();
+
+    // 3. 메인 화면 HUD(스킬창, 경험치바 등)는 '나'만 있으면 됨
     if (APlayerController* PC = Cast<APlayerController>(GetController()))
     {
-        // [핵심 수정 1] this를 직접 쓰지 않고 '약한 참조(Weak Pointer)'로 감쌉니다.
-        // 이렇게 하면 캐릭터가 파괴되었을 때 자동으로 감지할 수 있습니다.
         TWeakObjectPtr<AF1HeroCharacter> WeakThis(this);
-
         FTimerDelegate TimerDelegate;
 
-        // 람다 캡처에 this 대신 WeakThis를 넣습니다.
         TimerDelegate.BindLambda([WeakThis, PC]()
             {
-                // [핵심 수정 2] WeakThis가 유효한지 먼저 검사합니다.
-                // 캐릭터가 죽었으면 여기서 걸러져서 리턴되므로 크래시가 안 납니다.
-                if (!WeakThis.IsValid() || !IsValid(PC))
-                {
-                    return;
-                }
-
-                // [핵심 수정 3] 유효함이 확인되었으니, 진짜 포인터(StrongThis)를 꺼냅니다.
+                if (!WeakThis.IsValid() || !IsValid(PC)) return;
                 AF1HeroCharacter* StrongThis = WeakThis.Get();
 
-                // 2. 데이터 도착 확인
-                // 이제 this 대신 StrongThis를 사용합니다.
+                // 데이터 준비 확인
                 bool bAttributesReady = (StrongThis->AttributeSet != nullptr);
-                bool bAbilitiesReady = (StrongThis->AbilitySystemComponent != nullptr &&
-                    StrongThis->AbilitySystemComponent->GetActivatableAbilities().Num() > 0);
+                bool bAbilitiesReady = (StrongThis->AbilitySystemComponent != nullptr);
 
                 if (bAttributesReady && bAbilitiesReady)
                 {
-                    // 3. 데이터가 준비됨! -> 타이머 해제하고 초기화 진행
-                    // StrongThis를 통해 GetWorld()에 안전하게 접근
                     if (UWorld* World = StrongThis->GetWorld())
                     {
                         World->GetTimerManager().ClearTimer(StrongThis->HUDInitTimerHandle);
                     }
 
+                    // [여기서 InitUI를 또 부를 필요는 없습니다. 위에서 했으니까요.]
+
+                    // 메인 화면 HUD 초기화 (이건 내 컨트롤러가 있을 때만!)
                     if (AF1HUD* HUD = Cast<AF1HUD>(PC->GetHUD()))
                     {
-                        UE_LOG(LogTemp, Warning, TEXT("[Client] All Data Received! Initializing HUD..."));
-
-                        // 데이터 넘겨주기
+                        UE_LOG(LogTemp, Warning, TEXT("[Client] HUD Initialized!"));
                         HUD->InitOverlay(PC, StrongThis->GetPlayerState(), StrongThis->AbilitySystemComponent, StrongThis->AttributeSet);
-
-                        // UI 초기화
-                        StrongThis->InitUI();
                     }
                 }
             });
 
-        // 타이머 실행
         GetWorld()->GetTimerManager().SetTimer(HUDInitTimerHandle, TimerDelegate, 0.1f, true);
     }
 }
-
 void AF1HeroCharacter::SetCharacterClass(FName CharacterRowName)
 {
     // ... 유효성 검사 (유지) ...
