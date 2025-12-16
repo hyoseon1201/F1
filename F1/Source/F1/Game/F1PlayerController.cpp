@@ -241,6 +241,12 @@ void AF1PlayerController::TraceAndAttackTarget()
 		return;
 	}
 
+	if (GetASC() && GetASC()->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag("Ability.State.Casting")))
+	{
+		StopMovement();
+		return;
+	}
+
 	APawn* ControlledPawn = GetPawn();
 	if (!ControlledPawn) return;
 
@@ -388,6 +394,11 @@ void AF1PlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
 		return;
 	}
 
+	if (GetASC() && GetASC()->HasMatchingGameplayTag(FF1GameplayTags::Get().Ability_State_Casting))
+	{
+		return;
+	}
+
 	FollowTime += GetWorld()->GetDeltaSeconds();
 	GetHitResultUnderCursor(ECC_Visibility, false, CursorHit);
 
@@ -427,6 +438,11 @@ void AF1PlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 	if (!InputTag.MatchesTagExact(FF1GameplayTags::Get().InputTag_RMB))
 	{
 		if (GetASC()) GetASC()->AbilityInputTagReleased(InputTag);
+		return;
+	}
+
+	if (GetASC() && GetASC()->HasMatchingGameplayTag(FF1GameplayTags::Get().Ability_State_Casting))
+	{
 		return;
 	}
 

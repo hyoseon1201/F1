@@ -217,25 +217,60 @@ void UF1ProjectileSpell::SpawnProjectileExecution()
 		}
 	}
 	// -------------------------------------------------------------------------
-	// B. Arc Mode (작성자님이 사용 중인 모드)
+	// B. Arc Mode (곡사포) - 사거리 밖 클릭 시 최대 사거리 발사
 	// -------------------------------------------------------------------------
 	else if (SpawnMode == EF1ProjectileSpawnMode::Arc)
 	{
-		const float MaxRange = 1500.0f;
-		float TossSpeed = 1500.0f;
-		FVector OutLaunchVelocity = FVector::ZeroVector;
+		const float MaxRange = 700.0f;     // 최대 사거리 (원하는 대로 조절)
+		const float BaseTossSpeed = 1500.0f; // 기본 투사체 속도
+
 		FVector AdjustedTarget = CachedTargetLocation;
 		FVector ToTarget = CachedTargetLocation - SocketLocation;
 
-		// 사거리 보정 (높이차 무시하고 2D 거리로만 제한)
-		if (ToTarget.Size2D() > MaxRange)
+		// 1. [거리 제한] 사거리보다 멀면 최대 사거리 위치로 자르기
+		float Distance = ToTarget.Size2D();
+		if (Distance > MaxRange)
 		{
-			AdjustedTarget = SocketLocation + (ToTarget.GetSafeNormal2D() * MaxRange);
-			AdjustedTarget.Z = CachedTargetLocation.Z; // 높이는 원래 타겟 높이 유지
+			// 방향은 유지하되, 거리는 MaxRange로 고정
+			FVector Direction2D = ToTarget.GetSafeNormal2D();
+			AdjustedTarget = SocketLocation + (Direction2D * MaxRange);
+
+			// 2. [높이 보정] 잘라낸 위치(AdjustedTarget)의 땅 높이(Z)를 다시 찾음
+			// (이걸 안 하면 땅속이나 공중을 조준해서 탄도 계산이 꼬입니다)
+			FHitResult GroundHit;
+			FVector TraceStart = AdjustedTarget;
+			TraceStart.Z += 1000.0f; // 하늘에서
+			FVector TraceEnd = AdjustedTarget;
+			TraceEnd.Z -= 1000.0f;   // 땅으로 쏨
+
+			FCollisionQueryParams Params;
+			Params.AddIgnoredActor(GetAvatarActorFromActorInfo()); // 나는 무시
+
+			if (GetWorld()->LineTraceSingleByChannel(GroundHit, TraceStart, TraceEnd, ECC_Visibility, Params))
+			{
+				AdjustedTarget.Z = GroundHit.Location.Z; // 정확한 땅 높이로 보정
+			}
+			else
+			{
+				AdjustedTarget.Z = CachedTargetLocation.Z; // 실패 시 원래 높이 유지
+			}
 		}
 
-		// 중력 보정 로직
-		float EffectiveGravityZ = CachedGravityZ;
+		// 3. [속도 보정] 거리가 멀면 속도를 조금 더 줘서 닿게 만듦 (옵션)
+		// MaxRange까지 쏘려면 속도가 충분해야 함. 거리 비례해서 속도 증가 (최소 BaseSpeed 보장)
+		// 공식: R = v^2 / g 이므로, 멀리 쏘려면 v가 커야 함.
+		float RequiredSpeed = BaseTossSpeed;
+		if (Distance > MaxRange)
+		{
+			// 멀리 쏠 때는 속도를 20% 정도 더 줘서 안정적으로 닿게 함
+			RequiredSpeed = BaseTossSpeed * 1.2f;
+		}
+
+		// 4. 곡사 해법 찾기
+		FVector OutLaunchVelocity = FVector::ZeroVector;
+		float EffectiveGravityZ = CachedGravityZ; // 중력 (기본 -980)
+
+		// 중력값 보정 (ProjectileMovement의 GravityScale 고려)
 		if (FMath::IsNearlyZero(EffectiveGravityZ))
 		{
 			if (AF1Projectile* ProjectileCDO = ProjectileClass->GetDefaultObject<AF1Projectile>())
@@ -247,27 +282,28 @@ void UF1ProjectileSpell::SpawnProjectileExecution()
 			}
 		}
 
-		// [핵심] 곡사 해법 찾기
+		// 엔진의 예측 함수 실행 (TossSpeed 대신 보정된 RequiredSpeed 사용)
 		bool bHaveSolution = UGameplayStatics::SuggestProjectileVelocity(
-			this, OutLaunchVelocity, SocketLocation, AdjustedTarget, TossSpeed,
+			this, OutLaunchVelocity, SocketLocation, AdjustedTarget, RequiredSpeed,
 			false, 0.f, EffectiveGravityZ, ESuggestProjVelocityTraceOption::DoNotTrace);
 
-		if (bHaveSolution)
+		// 5. [Fallback] 계산 실패 시 (천장에 막히거나 사거리 부족)
+		if (!bHaveSolution)
 		{
-			UE_LOG(LogTemp, Log, TEXT("[DEBUG] Arc Solution Found. Velocity: %s"), *OutLaunchVelocity.ToString());
-		}
-		else
-		{
-			UE_LOG(LogTemp, Warning, TEXT("[DEBUG] No Arc Solution! Using Linear Fallback."));
-			FVector Direction = (AdjustedTarget - SocketLocation).GetSafeNormal();
-			OutLaunchVelocity = Direction * TossSpeed;
+			UE_LOG(LogTemp, Warning, TEXT("[DEBUG] Arc Solution Not Found! Using 45 degree High-Arc fallback."));
+
+			// 그냥 타겟 방향으로 45도 각도로 쏘아 올림 (최대 비거리)
+			FVector DirToTarget = (AdjustedTarget - SocketLocation).GetSafeNormal2D();
+			FRotator LaunchRot = DirToTarget.Rotation();
+			LaunchRot.Pitch = 45.0f; // 45도 고정
+
+			OutLaunchVelocity = LaunchRot.Vector() * RequiredSpeed;
 		}
 
+		// 6. 스폰 및 발사
 		SpawnTransform.SetLocation(SocketLocation);
-		// 속도 방향대로 회전시킴 (곡사니까 위를 볼 수 있음)
 		SpawnTransform.SetRotation(OutLaunchVelocity.Rotation().Quaternion());
 
-		// 스폰 시도
 		Projectile = GetWorld()->SpawnActorDeferred<AF1Projectile>(
 			ProjectileClass, SpawnTransform, GetOwningActorFromActorInfo(),
 			Cast<APawn>(GetOwningActorFromActorInfo()), ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
@@ -277,14 +313,9 @@ void UF1ProjectileSpell::SpawnProjectileExecution()
 			if (Projectile->ProjectileMovement)
 			{
 				Projectile->ProjectileMovement->Velocity = OutLaunchVelocity;
-				Projectile->ProjectileMovement->UpdateComponentVelocity(); // 속도 즉시 적용
+				Projectile->ProjectileMovement->UpdateComponentVelocity();
 			}
 			FinishSpawningProjectile(Projectile, AdjustedTarget);
-			UE_LOG(LogTemp, Warning, TEXT("[DEBUG] Arc Projectile Spawned SUCCESS!"));
-		}
-		else
-		{
-			UE_LOG(LogTemp, Error, TEXT("[DEBUG] SpawnActorDeferred FAILED! Check Physics/Collision settings."));
 		}
 	}
 	// -------------------------------------------------------------------------

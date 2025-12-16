@@ -228,6 +228,11 @@ void FF1GameplayTags::InitializeNativeGameplayTags()
         FString("Attacking State")
     );
 
+    GameplayTags.Ability_State_Casting = Manager.AddNativeGameplayTag(
+        FName("Ability.State.Casting"),
+        FString("Casting State")
+    );
+
     // ===========================================
     // Cooldown Tags (추가 필수! Ability 태그와 1:1 대응)
     // ===========================================

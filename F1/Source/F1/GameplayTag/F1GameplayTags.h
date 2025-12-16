@@ -92,6 +92,7 @@ public:
 
     // 공격중 태그
     FGameplayTag Ability_State_Attacking;
+    FGameplayTag Ability_State_Casting;
 
     // ===========================================
     // Cooldown Tags (추가 필수! Ability 태그와 1:1 대응)
@@ -111,6 +112,7 @@ public:
     // ===========================================
     // Event Tags
     // ===========================================
+    // PC에서 자동으로 돌릴 기본공격용 태그
     FGameplayTag Event_Combat_Attack;
 
     // ===========================================
