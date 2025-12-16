@@ -66,4 +66,17 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "F1AbilitySystemLibrary|GameplayEffect")
 	static void SetIsCriticalHit(UPARAM(ref) FGameplayEffectContextHandle& EffectContextHandle, bool bInIsCriticalHit);
+
+	/**
+	 * 스킬샷(논타겟) 발사를 위한 위치와 회전값을 계산합니다.
+	 * - 사거리 밖 클릭 시 최대 사거리로 위치 보정 (Clamp)
+	 * - 발사 각도의 Pitch를 0으로 고정하여 바닥 찍힘 방지
+	 * * @param Instigator 스킬을 쓰는 캐릭터 (Avatar)
+	 * @param TargetLocation 마우스로 찍은 바닥 위치
+	 * @param MaxRange 스킬의 최대 사거리
+	 * @param OutLocation (출력) 보정된 최종 목표 위치
+	 * @param OutRotation (출력) 발사체가 날아갈 회전값 (Pitch=0)
+	 */
+	UFUNCTION(BlueprintCallable, Category = "F1|Ability", meta = (DefaultToSelf = "Instigator"))
+	static void GetSkillshotTargeting(AActor* Instigator, FVector TargetLocation, float MaxRange, FVector& OutLocation, FRotator& OutRotation);
 };

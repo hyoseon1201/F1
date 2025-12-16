@@ -3,14 +3,15 @@
 
 #include "AbilitySystem/F1AbilitySystemLibrary.h"
 #include "Kismet/GameplayStatics.h"
-#include <UI/HUD/F1HUD.h>
-#include <Game/F1PlayerState.h>
+#include "UI/HUD/F1HUD.h"
+#include "Game/F1PlayerState.h"
 #include "UI/WidgetController/F1WidgetController.h"
-#include <F1AbilityTypes.h>
-#include <Character/F1CharacterBase.h>
+#include "F1AbilityTypes.h"
+#include "Character/F1CharacterBase.h"
 #include "F1AbilitySystemComponent.h"
-#include <AbilitySystemBlueprintLibrary.h>
-#include <GameplayTag/F1GameplayTags.h>
+#include "AbilitySystemBlueprintLibrary.h"
+#include "GameplayTag/F1GameplayTags.h"
+#include "Kismet/KismetMathLibrary.h"
 
 UF1OverlayWidgetController* UF1AbilitySystemLibrary::GetOverlayWidgetController(const UObject* WorldContextObject)
 {
@@ -125,4 +126,44 @@ void UF1AbilitySystemLibrary::SetIsCriticalHit(UPARAM(ref)FGameplayEffectContext
 	{
 		F1EffectContext->SetIsCriticalHit(bInIsCriticalHit);
 	}
+}
+
+void UF1AbilitySystemLibrary::GetSkillshotTargeting(AActor* Instigator, FVector TargetLocation, float MaxRange, FVector& OutLocation, FRotator& OutRotation)
+{
+	if (!Instigator)
+	{
+		OutLocation = TargetLocation;
+		OutRotation = FRotator::ZeroRotator;
+		return;
+	}
+
+	FVector ActorLoc = Instigator->GetActorLocation();
+
+	// 1. 방향 벡터 구하기 (2D 평면 기준, 높이 무시)
+	FVector Direction = (TargetLocation - ActorLoc);
+	Direction.Z = 0.f; // 높이 차이 제거
+
+	// 2. 거리 계산 (2D)
+	float DistanceSq = Direction.SizeSquared2D();
+	float RangeSq = MaxRange * MaxRange;
+
+	// 3. 위치 보정 (Clamp)
+	if (DistanceSq > RangeSq)
+	{
+		// 사거리보다 멀면: 방향 단위벡터 * 사거리 + 내 위치
+		Direction.Normalize();
+		OutLocation = ActorLoc + (Direction * MaxRange);
+	}
+	else
+	{
+		// 사거리 안이면: 그냥 클릭한 위치 사용
+		OutLocation = TargetLocation;
+	}
+
+	// 4. 회전값 계산 (LookAt) - 여기서 바닥 꽂힘(Pitch) 문제 해결
+	// 내 위치에서 최종 목표 위치를 바라보는 회전
+	FRotator LookAtRot = UKismetMathLibrary::FindLookAtRotation(ActorLoc, OutLocation);
+
+	// Pitch와 Roll을 0으로 강제 고정 -> 수평 발사
+	OutRotation = FRotator(0.f, LookAtRot.Yaw, 0.f);
 }

@@ -1,14 +1,14 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// F1MoveToTarget.cpp
 
-#include "AbilitySystem/AbilityTask/F1MoveToTarget.h"
+#include "F1MoveToTarget.h" // 헤더 경로 주의
 #include "GameFramework/Controller.h"
-#include "GameFramework/Pawn.h"
+#include "GameFramework/Character.h" // 캐릭터 캐스팅용
 #include "Blueprint/AIBlueprintHelperLibrary.h"
 
 UF1MoveToTarget::UF1MoveToTarget(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
-	bTickingTask = true; // Tick 활성화
+	bTickingTask = true;
 	bIsFinished = false;
 }
 
@@ -27,94 +27,109 @@ void UF1MoveToTarget::Activate()
 {
 	Super::Activate();
 
-	// [수정] 유효성 검사 강화
-	// 액터도 없고, 위치도 (0,0,0)이면 이동할 곳이 없으므로 취소
+	// 1. 유효성 검사
 	bool bHasActor = (TargetActor != nullptr);
 	bool bHasLocation = !TargetLocation.IsZero();
-
 	if (!bHasActor && !bHasLocation)
 	{
-		// 실패 로그 (필요시 주석 해제)
-		// UE_LOG(LogTemp, Warning, TEXT("MoveToTarget Failed: No Target Actor and Location is Zero."));
-
-		if (ShouldBroadcastAbilityTaskDelegates())
-		{
-			OnCancelled.Broadcast();
-		}
+		if (ShouldBroadcastAbilityTaskDelegates()) OnCancelled.Broadcast();
 		EndTask();
+		return;
 	}
+
+	// 2. 서버/클라이언트 모두 이동 명령 실행
+	AActor* Avatar = GetAvatarActor();
+	if (Avatar)
+	{
+		APawn* Pawn = Cast<APawn>(Avatar);
+		if (Pawn && Pawn->GetController())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[%s] Trying to Move..."), (Avatar->GetNetMode() == NM_Client ? TEXT("Client") : TEXT("Server")));
+
+			if (TargetActor)
+				UAIBlueprintHelperLibrary::SimpleMoveToActor(Pawn->GetController(), TargetActor);
+			else
+				UAIBlueprintHelperLibrary::SimpleMoveToLocation(Pawn->GetController(), TargetLocation);
+		}
+	}
+
+	// 3. 거리 체크 시작
+	CheckDistanceAndFinish();
 }
 
 void UF1MoveToTarget::TickTask(float DeltaTime)
 {
 	if (bIsFinished) return;
-
 	Super::TickTask(DeltaTime);
 
-	AActor* Avatar = GetAvatarActor();
-	if (!Avatar)
+	// 클라이언트/서버 모두 매 프레임 거리를 잽니다.
+	// 서버는 이동 중이라 거리가 줄어들 것이고,
+	// 클라이언트는 리플리케이션된 위치를 받아 거리가 줄어드는 것을 감지합니다.
+	CheckDistanceAndFinish();
+}
+
+void UF1MoveToTarget::PerformFaceTarget()
+{
+	ACharacter* AvatarChar = Cast<ACharacter>(GetAvatarActor());
+	if (!AvatarChar) return;
+
+	FVector Destination = (TargetActor) ? TargetActor->GetActorLocation() : TargetLocation;
+	FVector Dir = (Destination - AvatarChar->GetActorLocation()).GetSafeNormal2D();
+
+	if (!Dir.IsZero())
 	{
-		EndTask();
-		return;
-	}
-
-	APawn* Pawn = Cast<APawn>(Avatar);
-	if (!Pawn) return;
-	AController* Controller = Pawn->GetController();
-	if (!Controller) return;
-
-	// 1. 목표 지점 결정 (액터가 있으면 액터 위치, 없으면 고정 위치)
-	FVector Destination = TargetLocation;
-	if (TargetActor)
-	{
-		Destination = TargetActor->GetActorLocation();
-	}
-
-	// 2. 거리 계산 (2D 거리 사용 권장)
-	float Dist = FVector::Dist2D(Avatar->GetActorLocation(), Destination);
-
-	// 3. 도착 판정
-	if (Dist <= StopDistance)
-	{
-		// 도착함! 이동 멈춤
-		Controller->StopMovement();
-
-		if (ShouldBroadcastAbilityTaskDelegates())
-		{
-			OnReached.Broadcast(); // 성공 신호 발송
-		}
-		bIsFinished = true;
-		EndTask();
-	}
-	else
-	{
-		// 4. 이동 명령 (아직 멀었음)
-		if (TargetActor)
-		{
-			// 액터 추적 (움직이는 대상)
-			UAIBlueprintHelperLibrary::SimpleMoveToActor(Controller, TargetActor);
-		}
-		else
-		{
-			// 좌표 이동 (고정된 대상)
-			UAIBlueprintHelperLibrary::SimpleMoveToLocation(Controller, Destination);
-		}
+		AvatarChar->SetActorRotation(Dir.Rotation());
 	}
 }
 
 void UF1MoveToTarget::OnDestroy(bool bInOwnerFinished)
 {
-	// 태스크가 끝날 때(성공, 취소, 중단 등) 이동을 멈추게 함
-	if (AActor* Avatar = GetAvatarActor())
+	if (!bIsFinished) // 성공해서 끝난 게 아니라, 취소되거나 강제 종료된 경우
 	{
-		if (APawn* Pawn = Cast<APawn>(Avatar))
+		if (AActor* Avatar = GetAvatarActor())
 		{
-			if (AController* Controller = Pawn->GetController())
+			if (APawn* Pawn = Cast<APawn>(Avatar))
 			{
-				Controller->StopMovement();
+				if (AController* Controller = Pawn->GetController())
+					Controller->StopMovement();
 			}
 		}
 	}
-
 	Super::OnDestroy(bInOwnerFinished);
+}
+
+void UF1MoveToTarget::CheckDistanceAndFinish()
+{
+	AActor* Avatar = GetAvatarActor();
+	if (!Avatar) return;
+
+	FVector Destination = TargetLocation;
+	if (TargetActor) Destination = TargetActor->GetActorLocation();
+
+	// 2D 거리 계산 (높이차 무시)
+	float Dist = FVector::Dist2D(Avatar->GetActorLocation(), Destination);
+
+	// [중요] 타겟의 캡슐 반경 고려 (선택 사항)
+	// 만약 몬스터에게 다가가는 거라면 몬스터 몸집만큼 덜 가도 도착으로 쳐야 합니다.
+	// if (TargetActor) Dist -= TargetActor->GetSimpleCollisionRadius();
+
+	// 도착 판정
+	if (Dist <= StopDistance)
+	{
+		// 양쪽 모두 이동 정지 명령
+		APawn* Pawn = Cast<APawn>(Avatar);
+		if (Pawn && Pawn->GetController())
+		{
+			Pawn->GetController()->StopMovement();
+		}
+
+		PerformFaceTarget();
+
+		if (ShouldBroadcastAbilityTaskDelegates())
+		{
+			OnReached.Broadcast();
+		}
+		bIsFinished = true;
+		EndTask();
+	}
 }

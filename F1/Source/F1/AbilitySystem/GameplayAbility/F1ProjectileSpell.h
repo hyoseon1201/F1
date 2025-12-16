@@ -5,6 +5,15 @@
 #include "AbilitySystem/AbilityTask/F1AT_WaitClientTargetData.h"
 #include "F1ProjectileSpell.generated.h"
 
+UENUM(BlueprintType)
+enum class EF1ProjectileSpawnMode : uint8
+{
+	None,
+	Linear,
+	Homing,
+	Arc
+};
+
 class AF1Projectile;
 class UGameplayAbilityTargetData_LocationInfo;
 
@@ -18,6 +27,10 @@ UCLASS()
 class F1_API UF1ProjectileSpell : public UF1DamageGameplayAbility
 {
 	GENERATED_BODY()
+
+public:
+	UFUNCTION(BlueprintCallable)
+	void CacheTargetData(const FGameplayAbilityTargetDataHandle& DataHandle, EF1ProjectileSpawnMode OverrideSpawnMode = EF1ProjectileSpawnMode::None);
 
 protected:
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
@@ -40,18 +53,11 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "Projectile")
 	void SpawnProjectileExecution();
 
-	UFUNCTION(BlueprintCallable)
-	void CacheTargetData(const FGameplayAbilityTargetDataHandle& DataHandle);
-
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Projectile")
 	TSubclassOf<AF1Projectile> ProjectileClass;
 
-	// --- 임시 저장용 변수들 (캐싱) ---
-
-	// 어떤 모드로 쏠지 (주의: 클라/서버 싱크를 위해 보통은 별도 어빌리티로 분리하지만, 여기선 변수로 처리)
-	enum class EProjectileSpawnMode { None, Linear, Homing, Arc };
-	EProjectileSpawnMode SpawnMode = EProjectileSpawnMode::None;
+	EF1ProjectileSpawnMode SpawnMode = EF1ProjectileSpawnMode::None;
 
 	// 서버가 기억하고 있을 타겟 위치
 	FVector CachedTargetLocation;

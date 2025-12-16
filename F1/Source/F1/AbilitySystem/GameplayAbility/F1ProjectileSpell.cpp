@@ -9,6 +9,42 @@
 #include "Components/PrimitiveComponent.h"
 #include "GameFramework/PlayerState.h"
 #include "AbilitySystem/AbilityTask/F1AT_WaitClientTargetData.h"
+#include "DrawDebugHelpers.h"
+
+void UF1ProjectileSpell::CacheTargetData(const FGameplayAbilityTargetDataHandle& DataHandle, EF1ProjectileSpawnMode OverrideSpawnMode)
+{
+	if (DataHandle.Data.IsValidIndex(0))
+	{
+		const FGameplayAbilityTargetData_SingleTargetHit* HitData = static_cast<const FGameplayAbilityTargetData_SingleTargetHit*>(DataHandle.Get(0));
+
+		if (HitData && HitData->HitResult.IsValidBlockingHit())
+		{
+			// 1. 위치 및 타겟 저장
+			CachedHomingTarget = HitData->HitResult.GetActor();
+			CachedTargetLocation = HitData->HitResult.Location;
+
+			// [핵심 수정] 
+			// 인자로 받은 모드가 있으면 그걸 쓰고, 없으면(None) 자동으로 판단
+			if (OverrideSpawnMode != EF1ProjectileSpawnMode::None)
+			{
+				SpawnMode = OverrideSpawnMode;
+			}
+			else
+			{
+				if (CachedHomingTarget && CachedHomingTarget->Implements<UF1CombatInterface>())
+				{
+					SpawnMode = EF1ProjectileSpawnMode::Homing;
+				}
+				else
+				{
+					SpawnMode = EF1ProjectileSpawnMode::Linear;
+				}
+			}
+
+			UE_LOG(LogTemp, Warning, TEXT("[Ability] CacheTargetData: Location Saved %s, Mode: %d"), *CachedTargetLocation.ToString(), (int32)SpawnMode);
+		}
+	}
+}
 
 void UF1ProjectileSpell::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
@@ -29,7 +65,7 @@ void UF1ProjectileSpell::StartTargetDataTask(EF1TargetingType TargetingType)
 // 1. 직사 발사 (보통 논타겟 -> Ground 모드)
 void UF1ProjectileSpell::SpawnProjectile(const FVector& ProjectileTargetLocation)
 {
-	SpawnMode = EProjectileSpawnMode::Linear;
+	SpawnMode = EF1ProjectileSpawnMode::Linear;
 	CachedTargetLocation = ProjectileTargetLocation;
 
 	// "나는 땅을 찍어도 발사할 거야"
@@ -39,7 +75,7 @@ void UF1ProjectileSpell::SpawnProjectile(const FVector& ProjectileTargetLocation
 // 2. 유도 발사 (타겟팅 -> Enemy 모드)
 void UF1ProjectileSpell::SpawnHomingProjectile(AActor* HomingTarget)
 {
-	SpawnMode = EProjectileSpawnMode::Homing;
+	SpawnMode = EF1ProjectileSpawnMode::Homing;
 	CachedHomingTarget = HomingTarget;
 
 	// "나는 적이 아니면 발사 안 해"
@@ -49,7 +85,7 @@ void UF1ProjectileSpell::SpawnHomingProjectile(AActor* HomingTarget)
 // 3. 곡사 발사 (보통 논타겟 -> Ground 모드)
 void UF1ProjectileSpell::SpawnArcProjectile(const FVector& TargetLocation, float OverrideGravityZ)
 {
-	SpawnMode = EProjectileSpawnMode::Arc;
+	SpawnMode = EF1ProjectileSpawnMode::Arc;
 	CachedTargetLocation = TargetLocation;
 	CachedGravityZ = OverrideGravityZ;
 
@@ -85,19 +121,19 @@ void UF1ProjectileSpell::OnClientDataReceived(const FGameplayAbilityTargetDataHa
 		if (HitActor && HitActor->Implements<UF1CombatInterface>()) // 적군인지 확인 (인터페이스나 태그로)
 		{
 			CachedHomingTarget = HitActor;
-			SpawnMode = EProjectileSpawnMode::Homing; // 자동으로 유도 모드 전환
+			SpawnMode = EF1ProjectileSpawnMode::Homing; // 자동으로 유도 모드 전환
 			UE_LOG(LogTemp, Warning, TEXT("[Ability] Target Found: %s (Homing Mode)"), *HitActor->GetName());
 		}
 		else
 		{
-			SpawnMode = EProjectileSpawnMode::Linear; // 땅 클릭이면 직사
+			SpawnMode = EF1ProjectileSpawnMode::Linear; // 땅 클릭이면 직사
 		}
 	}
 	// B. 그냥 위치 데이터만 있다면?
 	else if (LocationData)
 	{
 		CachedTargetLocation = LocationData->TargetLocation.LiteralTransform.GetLocation();
-		SpawnMode = EProjectileSpawnMode::Linear;
+		SpawnMode = EF1ProjectileSpawnMode::Linear;
 	}
 
 	UE_LOG(LogTemp, Warning, TEXT("[Ability] Data Cached. Waiting for Notify..."));
@@ -108,16 +144,47 @@ void UF1ProjectileSpell::OnClientDataReceived(const FGameplayAbilityTargetDataHa
 // ============================================================================
 void UF1ProjectileSpell::SpawnProjectileExecution()
 {
-	// 서버만 실행
-	if (!GetOwningActorFromActorInfo()->HasAuthority()) return;
+	// [디버그 1] 함수 호출 및 권한 확인
+	const bool bIsServer = GetOwningActorFromActorInfo()->HasAuthority();
+	UE_LOG(LogTemp, Warning, TEXT("[DEBUG] SpawnProjectileExecution Called. Authority: %d"), bIsServer);
 
+	if (!bIsServer) return;
+
+	// [중요 체크 1] 프로젝타일 클래스가 비어있는지 확인
+	if (!ProjectileClass)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[DEBUG] FAILED: ProjectileClass is NULL! check GA Blueprint Defaults."));
+		// 클래스가 없으면 더 진행하지 않고 종료 (스킬 쿨타임만 돌게 됨)
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+		return;
+	}
+
+	// [디버그 2] 모드 및 타겟 데이터 확인
+	UE_LOG(LogTemp, Warning, TEXT("[DEBUG] Spawn Mode: %d (0:Linear, 1:Arc, 2:Homing)"), (int32)SpawnMode);
 	UE_LOG(LogTemp, Warning, TEXT("[Ability] Executing Spawn at Cached Location: %s"), *CachedTargetLocation.ToString());
 
+	// [디버그 3] 소켓 위치 확인
 	FVector SocketLocation = FVector::ZeroVector;
 	if (IF1CombatInterface* CombatInterface = Cast<IF1CombatInterface>(GetAvatarActorFromActorInfo()))
 	{
 		SocketLocation = CombatInterface->GetCombatSocketLocation();
 	}
+
+	// 소켓 위치가 0,0,0이면 보통 문제가 있는 것임
+	if (SocketLocation.IsZero())
+	{
+		UE_LOG(LogTemp, Error, TEXT("[DEBUG] WARNING: SocketLocation is Zero! Interface implementation missing?"));
+		// 비상시 액터 위치라도 사용하도록 보정
+		SocketLocation = GetAvatarActorFromActorInfo()->GetActorLocation();
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[DEBUG] Socket Location: %s"), *SocketLocation.ToString());
+	}
+
+	// [시각적 디버깅] 서버 기준 발사 위치에 빨간 구체를 그립니다 (5초간 유지)
+	DrawDebugSphere(GetWorld(), SocketLocation, 20.0f, 12, FColor::Red, false, 5.0f);
+
 
 	FTransform SpawnTransform;
 	AF1Projectile* Projectile = nullptr;
@@ -125,7 +192,7 @@ void UF1ProjectileSpell::SpawnProjectileExecution()
 	// -------------------------------------------------------------------------
 	// A. Homing Mode
 	// -------------------------------------------------------------------------
-	if (SpawnMode == EProjectileSpawnMode::Homing)
+	if (SpawnMode == EF1ProjectileSpawnMode::Homing)
 	{
 		if (CachedHomingTarget)
 		{
@@ -144,25 +211,30 @@ void UF1ProjectileSpell::SpawnProjectileExecution()
 				FinishSpawningProjectile(Projectile, CachedHomingTarget->GetActorLocation());
 			}
 		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("[DEBUG] FAILED: Homing Mode but No CachedHomingTarget!"));
+		}
 	}
 	// -------------------------------------------------------------------------
-	// B. Arc Mode
+	// B. Arc Mode (작성자님이 사용 중인 모드)
 	// -------------------------------------------------------------------------
-	else if (SpawnMode == EProjectileSpawnMode::Arc)
+	else if (SpawnMode == EF1ProjectileSpawnMode::Arc)
 	{
-		// 곡사 계산 로직
 		const float MaxRange = 1500.0f;
 		float TossSpeed = 1500.0f;
 		FVector OutLaunchVelocity = FVector::ZeroVector;
-		FVector AdjustedTarget = CachedTargetLocation; // 캐시된 타겟 사용
+		FVector AdjustedTarget = CachedTargetLocation;
 		FVector ToTarget = CachedTargetLocation - SocketLocation;
 
+		// 사거리 보정 (높이차 무시하고 2D 거리로만 제한)
 		if (ToTarget.Size2D() > MaxRange)
 		{
 			AdjustedTarget = SocketLocation + (ToTarget.GetSafeNormal2D() * MaxRange);
-			AdjustedTarget.Z = CachedTargetLocation.Z;
+			AdjustedTarget.Z = CachedTargetLocation.Z; // 높이는 원래 타겟 높이 유지
 		}
 
+		// 중력 보정 로직
 		float EffectiveGravityZ = CachedGravityZ;
 		if (FMath::IsNearlyZero(EffectiveGravityZ))
 		{
@@ -175,19 +247,27 @@ void UF1ProjectileSpell::SpawnProjectileExecution()
 			}
 		}
 
+		// [핵심] 곡사 해법 찾기
 		bool bHaveSolution = UGameplayStatics::SuggestProjectileVelocity(
 			this, OutLaunchVelocity, SocketLocation, AdjustedTarget, TossSpeed,
 			false, 0.f, EffectiveGravityZ, ESuggestProjVelocityTraceOption::DoNotTrace);
 
-		if (!bHaveSolution)
+		if (bHaveSolution)
 		{
+			UE_LOG(LogTemp, Log, TEXT("[DEBUG] Arc Solution Found. Velocity: %s"), *OutLaunchVelocity.ToString());
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[DEBUG] No Arc Solution! Using Linear Fallback."));
 			FVector Direction = (AdjustedTarget - SocketLocation).GetSafeNormal();
 			OutLaunchVelocity = Direction * TossSpeed;
 		}
 
 		SpawnTransform.SetLocation(SocketLocation);
+		// 속도 방향대로 회전시킴 (곡사니까 위를 볼 수 있음)
 		SpawnTransform.SetRotation(OutLaunchVelocity.Rotation().Quaternion());
 
+		// 스폰 시도
 		Projectile = GetWorld()->SpawnActorDeferred<AF1Projectile>(
 			ProjectileClass, SpawnTransform, GetOwningActorFromActorInfo(),
 			Cast<APawn>(GetOwningActorFromActorInfo()), ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
@@ -197,13 +277,18 @@ void UF1ProjectileSpell::SpawnProjectileExecution()
 			if (Projectile->ProjectileMovement)
 			{
 				Projectile->ProjectileMovement->Velocity = OutLaunchVelocity;
-				Projectile->ProjectileMovement->UpdateComponentVelocity();
+				Projectile->ProjectileMovement->UpdateComponentVelocity(); // 속도 즉시 적용
 			}
 			FinishSpawningProjectile(Projectile, AdjustedTarget);
+			UE_LOG(LogTemp, Warning, TEXT("[DEBUG] Arc Projectile Spawned SUCCESS!"));
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("[DEBUG] SpawnActorDeferred FAILED! Check Physics/Collision settings."));
 		}
 	}
 	// -------------------------------------------------------------------------
-	// C. Linear Mode (Default)
+	// C. Linear Mode
 	// -------------------------------------------------------------------------
 	else
 	{
@@ -222,32 +307,8 @@ void UF1ProjectileSpell::SpawnProjectileExecution()
 		}
 	}
 
-	// [중요] 발사 후 어빌리티 종료
+	// 어빌리티 종료
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
-}
-
-void UF1ProjectileSpell::CacheTargetData(const FGameplayAbilityTargetDataHandle& DataHandle)
-{
-	// 데이터가 유효한지 확인
-	if (DataHandle.Data.IsValidIndex(0))
-	{
-		// SingleTargetHit(마우스 히트 결과) 형태로 데이터를 꺼냄
-		const FGameplayAbilityTargetData_SingleTargetHit* HitData = static_cast<const FGameplayAbilityTargetData_SingleTargetHit*>(DataHandle.Get(0));
-
-		if (HitData && HitData->HitResult.IsValidBlockingHit())
-		{
-			// 1. 적(Actor) 저장 (유도탄용)
-			CachedHomingTarget = HitData->HitResult.GetActor();
-
-			// 2. 위치 저장 (만약 적이 죽거나 사라졌을 때 마지막 위치로 날아가기 위함)
-			CachedTargetLocation = HitData->HitResult.Location;
-
-			// 3. 모드 설정 (적이 잡혔으니 Homing)
-			SpawnMode = EProjectileSpawnMode::Homing;
-
-			UE_LOG(LogTemp, Warning, TEXT("[Ability] CacheTargetData: Target Cached [%s]"), *GetNameSafe(CachedHomingTarget));
-		}
-	}
 }
 
 void UF1ProjectileSpell::FinishSpawningProjectile(AF1Projectile* Projectile, const FVector& HitLocation)
